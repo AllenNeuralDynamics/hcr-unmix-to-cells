@@ -96,12 +96,41 @@ class FilterConfig:
 
 
 @dataclass
+class PlotConfig:
+    """Configuration for plot generation."""
+    avg_corr_thresh: float = 0.4
+    agg_prob_thresh: float = 0.25
+    save_format: str = 'png'
+    save_plot_params: Dict = field(default_factory=lambda: {'format': 'png', 'transparent': False})
+    gene_order: Optional[List[str]] = None  # None = auto-derive from var_names, prioritising common genes
+    plot_slow_plots: bool = False           # UMAP + stacked violin are skipped by default
+    cluster_labels_csv: Optional[str] = None  # Sankey diagram skipped gracefully when None
+    overwrite_plots: bool = True
+
+    @classmethod
+    def from_dict(cls, config: Dict) -> 'PlotConfig':
+        """Create PlotConfig from dictionary."""
+        save_format = config.get('save_format', 'png')
+        return cls(
+            avg_corr_thresh=config.get('avg_corr_thresh', 0.4),
+            agg_prob_thresh=config.get('agg_prob_thresh', 0.25),
+            save_format=save_format,
+            save_plot_params=config.get('save_plot_params', {'format': save_format, 'transparent': False}),
+            gene_order=config.get('gene_order', None),
+            plot_slow_plots=config.get('plot_slow_plots', False),
+            cluster_labels_csv=config.get('cluster_labels_csv', None),
+            overwrite_plots=config.get('overwrite_plots', True),
+        )
+
+
+@dataclass
 class TaxonomyMapperConfig:
     """Complete configuration for taxonomy mapping pipeline."""
     paths: PathConfig
     mapping_params: MappingParams
     filter_config: FilterConfig
-    
+    plot_config: PlotConfig = field(default_factory=PlotConfig)
+
     # Input/output settings
     dataset_folder: Path = None
     data_csv: str = None
@@ -136,11 +165,15 @@ class TaxonomyMapperConfig:
         
         filter_config_dict = mapping_config.get('filter_mapping_v1_types', {})
         filter_config = FilterConfig.from_dict(filter_config_dict)
-        
+
+        plot_config_dict = config.get('plot_config', {})
+        plot_config = PlotConfig.from_dict(plot_config_dict)
+
         return cls(
             paths=paths,
             mapping_params=mapping_params,
             filter_config=filter_config,
+            plot_config=plot_config,
             input_data_folder_name=mapping_config.get('input_data_folder_name', 'input_data'),
             mapped_data_folder_name=mapping_config.get('mapped_data_folder_name', 'mapped_data'),
             input_h5ad_name=mapping_config.get('input_h5ad_name', 'input_cellxgene.h5ad'),

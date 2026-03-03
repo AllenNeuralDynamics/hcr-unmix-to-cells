@@ -672,6 +672,7 @@ def mapping_quality_pairplot(plot_data,
             ax_col.axvline(agg_prob_thresh, color='red', linestyle='--', alpha=0.7)
 
     g.fig.tight_layout()
+    return g.fig
 
 def mapping_quality_boxplots(data, 
                             x=['broad_class_name', 'broad_subclass_name', 'supertype_name'],
@@ -796,3 +797,261 @@ def save_plot(fig, plots_folder, plot_name, save_plots, overwrite_plots, save_fo
         plt.close()
     else:
         plt.show()
+
+
+def generate_all_plots(mapped_adata_path, plots_output_path, plot_config):
+    """
+    Generate all standard taxonomy mapping plots and save to plots_output_path.
+
+    Parameters
+    ----------
+    mapped_adata_path : Path
+        Path to the mapped cellxgene h5ad file.
+    plots_output_path : Path
+        Directory where plots will be saved.
+    plot_config : PlotConfig
+        Configuration dataclass with plotting parameters.
+    """
+    plt.switch_backend('Agg')
+
+    plots_output_path = Path(plots_output_path)
+    plots_output_path.mkdir(parents=True, exist_ok=True)
+    sc.settings.figdir = plots_output_path
+
+    save_format = plot_config.save_format
+    save_plot_params = plot_config.save_plot_params
+    overwrite_plots = plot_config.overwrite_plots
+    avg_corr_thresh = plot_config.avg_corr_thresh
+    agg_prob_thresh = plot_config.agg_prob_thresh
+    save_plots = True
+    close_plots = True
+
+    # --- Load and format data ---
+    print(f"Loading mapped data from {mapped_adata_path}")
+    hcr_data = sc.read_h5ad(mapped_adata_path)
+    hcr_data.obs.columns = hcr_data.obs.columns.str.replace('CDM_', '', regex=False)
+    hcr_data.var['gene_identifier'] = hcr_data.var_names
+    hcr_data.var_names = hcr_data.var['gene_symbol']
+    hcr_data.layers['log1p'] = sc.pp.log1p(hcr_data.X, copy=True)
+    hcr_data = add_broad_types(hcr_data)
+    joined_colormap = get_shared_colormap(hcr_data)
+    hcr_data = add_colormap_adata(hcr_data, joined_colormap)
+    total_cells = hcr_data.shape[0]
+    all_hcr_cells = hcr_data.obs.copy()
+    print(f"{hcr_data.n_obs} cells, {hcr_data.n_vars} genes")
+
+    # --- Pre-filter mapping quality plots ---
+    sns.set_style('whitegrid')
+
+    print("Generating: mapping_quality")
+    fig = plot_mapping_quality(hcr_data, avg_corr_thresh, agg_prob_thresh)
+    save_plot(fig, plots_output_path, 'mapping_quality', save_plots, overwrite_plots, save_format, save_plot_params, close_plots)
+
+    print("Generating: mapping_quality_by_types_avg_correlation")
+    fig = mapping_quality_boxplots(hcr_data.obs, y='cluster_avg_correlation', colormap=joined_colormap, threshold_val=avg_corr_thresh)
+    save_plot(fig, plots_output_path, 'mapping_quality_by_types_avg_correlation', save_plots, overwrite_plots, save_format, save_plot_params, close_plots)
+
+    if np.all(hcr_data.obs.filter(regex='aggregate_probability$') == 1):
+        print("All aggregate probabilities are 1, skipping aggregate probability plots.")
+    else:
+        print("Generating: mapping_quality_by_type_aggregate_probability")
+        fig = mapping_quality_boxplots(hcr_data.obs, y='cluster_aggregate_probability', colormap=joined_colormap, threshold_val=agg_prob_thresh)
+        save_plot(fig, plots_output_path, 'mapping_quality_by_type_aggregate_probability', save_plots, overwrite_plots, save_format, save_plot_params, close_plots)
+
+        print("Generating: mapping_quality_params_pairplot")
+        fig = mapping_quality_pairplot(
+            plot_data=hcr_data.obs,
+            hierarchy_level='cluster',
+            color_col='broad_class_name',
+            joined_colormap=joined_colormap,
+            avg_corr_thresh=avg_corr_thresh,
+            agg_prob_thresh=agg_prob_thresh,
+        )
+        save_plot(fig, plots_output_path, 'mapping_quality_params_pairplot', save_plots, overwrite_plots, save_format, save_plot_params, close_plots)
+
+    # --- Filter cells by correlation threshold ---
+    hcr_data = hcr_data[hcr_data.obs['cluster_avg_correlation'] >= avg_corr_thresh]
+    n_filtered = total_cells - hcr_data.shape[0]
+    print(f"Filtered {n_filtered}/{total_cells} cells below avg_corr_thresh={avg_corr_thresh}. Remaining: {hcr_data.shape[0]}")
+
+    # --- Gene order ---
+    priority_genes = plot_config.gene_order if plot_config.gene_order else ['GFP', 'Gad2', 'Sst', 'Pvalb', 'Vip', 'Cck', 'Npy']
+    priority_present = [g for g in priority_genes if g in hcr_data.var_names]
+    gene_order = priority_present + sorted(list(set(hcr_data.var_names) - set(priority_present)))
+
+    # --- Filter single-cell clusters ---
+    cluster_counts = hcr_data.obs['cluster_name'].value_counts()
+    hcr_data = hcr_data[hcr_data.obs['cluster_name'].isin(cluster_counts[cluster_counts > 1].index)]
+
+    # --- UMAP (slow, optional) ---
+    if plot_config.plot_slow_plots:
+        print("Generating: UMAP (_types_counts)")
+        sc.pp.calculate_qc_metrics(hcr_data, percent_top=None, inplace=True)
+        if 'X_umap' not in hcr_data.obsm:
+            sc.pp.neighbors(hcr_data)
+            sc.tl.umap(hcr_data)
+        sc.pl.umap(
+            hcr_data,
+            color=["broad_class_name", "broad_subclass_name", "cluster_avg_correlation", "log1p_total_counts", "n_genes_by_counts"],
+            palette=joined_colormap,
+            wspace=0.25,
+            ncols=2,
+            save=f'_types_counts.{save_format}',
+            show=False,
+        )
+        plt.close('all')
+    else:
+        print("Skipping UMAP (plot_slow_plots=False).")
+
+    # --- Heatmap ---
+    print("Generating: heatmap (_broad_subclass_name)")
+    sc.pl.heatmap(
+        hcr_data,
+        var_names=gene_order,
+        groupby='broad_subclass_name',
+        layer='log1p',
+        swap_axes=False,
+        figsize=(10, 8),
+        cmap='viridis',
+        save=f'_broad_subclass_name.{save_format}',
+        show=False,
+    )
+    plt.close('all')
+
+    # --- Tracksplot ---
+    print("Generating: tracksplot (_supertype_name)")
+    sc.pl.tracksplot(
+        hcr_data,
+        var_names=gene_order,
+        groupby='supertype_name',
+        layer='log1p',
+        figsize=(18, 8),
+        save=f'_supertype_name.{save_format}',
+        show=False,
+    )
+    plt.close('all')
+
+    # --- Stacked violin (slow, optional) ---
+    if plot_config.plot_slow_plots:
+        print("Generating: stacked_violin_subclass_name")
+        sv_fig = sc.pl.stacked_violin(
+            hcr_data,
+            var_names=gene_order,
+            groupby='subclass_name',
+            layer='log1p',
+            swap_axes=False,
+            title='Subclasses',
+            return_fig=True,
+            show=False,
+        )
+        sv_fig = sv_fig.add_totals().style(ylim=(0, 5))
+        save_plot(sv_fig, plots_output_path, 'stacked_violin_subclass_name', save_plots, overwrite_plots, save_format, save_plot_params, close_plots)
+    else:
+        print("Skipping stacked violin (plot_slow_plots=False).")
+
+    # --- Dotplot by subclass ---
+    print("Generating: dotplot_broad_class_name")
+    fig, axes = plt.subplots(1, 3, figsize=(18, 8))
+    vmin, vmax = 0, np.max(hcr_data.layers['log1p'])
+    for class_n in ['GABA', 'Glut', 'NN']:
+        sc.pl.dotplot(
+            hcr_data[hcr_data.obs['broad_class_name'] == class_n],
+            var_names=gene_order,
+            groupby='subclass_name',
+            layer='log1p',
+            show=False,
+            swap_axes=True,
+            num_categories=hcr_data.obs[hcr_data.obs['broad_class_name'] == class_n]['subclass_name'].nunique(),
+            ax=axes[['GABA', 'Glut', 'NN'].index(class_n)],
+            title=f'{class_n} subclasses',
+            vmin=vmin,
+            vmax=vmax,
+        )
+    plt.tight_layout()
+    save_plot(fig, plots_output_path, 'dotplot_broad_class_name', save_plots, overwrite_plots, save_format, save_plot_params, close_plots)
+
+    # --- Dotplot by supertype ---
+    print("Generating: dotplot_supertype_name")
+    fig, axes = plt.subplots(2, 2, figsize=(20, 16))
+    vmin, vmax = 0, np.max(hcr_data.layers['log1p'])
+    gs_sp = fig.add_gridspec(2, 2)
+    ax_gaba = fig.add_subplot(gs_sp[0, :])
+    sc.pl.dotplot(
+        hcr_data[hcr_data.obs['broad_class_name'] == 'GABA'],
+        var_names=gene_order,
+        groupby='supertype_name',
+        layer='log1p',
+        show=False,
+        swap_axes=True,
+        num_categories=hcr_data[hcr_data.obs['broad_class_name'] == 'GABA'].obs['supertype_name'].nunique(),
+        ax=ax_gaba,
+        title='GABA supertypes',
+        vmin=vmin,
+        vmax=vmax,
+    )
+    for i, class_n in enumerate(['Glut', 'NN']):
+        sc.pl.dotplot(
+            hcr_data[hcr_data.obs['broad_class_name'] == class_n],
+            var_names=gene_order,
+            groupby='supertype_name',
+            layer='log1p',
+            show=False,
+            swap_axes=True,
+            num_categories=hcr_data[hcr_data.obs['broad_class_name'] == class_n].obs['supertype_name'].nunique(),
+            ax=axes[1, i],
+            title=f'{class_n} supertypes',
+            vmin=vmin,
+            vmax=vmax,
+        )
+    axes[0, 0].remove()
+    axes[0, 1].remove()
+    plt.tight_layout()
+    save_plot(fig, plots_output_path, 'dotplot_supertype_name', save_plots, overwrite_plots, save_format, save_plot_params, close_plots)
+
+    # --- Stacked category proportions ---
+    sns.set_style('darkgrid')
+
+    print("Generating: class_subclass_proportions")
+    fig, ax = plt.subplots(figsize=(12, 8))
+    plot_stacked_categories(hcr_data, 'broad_class_name', 'broad_subclass_name', joined_colormap, ax)
+    save_plot(fig, plots_output_path, 'class_subclass_proportions', save_plots, overwrite_plots, save_format, save_plot_params, close_plots)
+
+    print("Generating: class_subclass_supertypes_proportions")
+    fig, axes = plt.subplots(2, 2, figsize=(20, 16))
+    gs_sc = fig.add_gridspec(2, 2)
+    ax_gaba = fig.add_subplot(gs_sc[0, :])
+    label_kwargs = {'font_color': 'black', 'font_weight': 'normal', 'font_size': 7}
+    plot_stacked_categories(hcr_data[hcr_data.obs['broad_class_name'] == 'GABA'], 'broad_subclass_name', 'supertype_name', joined_colormap, ax_gaba, kwargs=label_kwargs)
+    plot_stacked_categories(hcr_data[hcr_data.obs['broad_class_name'] == 'Glut'], 'broad_subclass_name', 'supertype_name', joined_colormap, ax=axes[1, 0], kwargs=label_kwargs)
+    plot_stacked_categories(hcr_data[hcr_data.obs['broad_class_name'] == 'NN'], 'broad_subclass_name', 'supertype_name', joined_colormap, ax=axes[1, 1], kwargs=label_kwargs)
+    axes[0, 0].remove()
+    axes[0, 1].remove()
+    plt.tight_layout()
+    save_plot(fig, plots_output_path, 'class_subclass_supertypes_proportions', save_plots, overwrite_plots, save_format, save_plot_params, close_plots)
+
+    # --- Sankey diagram (optional, requires cluster_labels_csv) ---
+    if plot_config.cluster_labels_csv is not None:
+        cluster_labels_csv_path = Path(plot_config.cluster_labels_csv)
+        if not cluster_labels_csv_path.exists():
+            print(f"Skipping Sankey diagram: cluster_labels_csv not found at {cluster_labels_csv_path}")
+        else:
+            print("Generating: manual_clusters_supertypes (Sankey)")
+            cluster_labels_df = pd.read_csv(cluster_labels_csv_path)
+            cluster_labels_df.rename(columns={'cluster_id': 'hcr_cluster_id', 'cluster_label': 'hcr_cluster_label'}, inplace=True)
+            cluster_labels_df.set_index('cell_id', inplace=True)
+            if 'hcr_cluster_label' not in hcr_data.obs.columns:
+                hcr_data.obs = hcr_data.obs.merge(cluster_labels_df['hcr_cluster_label'], on='cell_id', how='left')
+            sankey_fig = create_sankey_diagram(
+                hcr_data,
+                ['hcr_cluster_label', 'supertype_name'],
+                colormap=joined_colormap,
+                sort_columns={'supertype_name': 'normal'},
+                title="Cluster Label -> Supertype",
+                height=1000, width=700,
+            )
+            sankey_fig.write_html(str(plots_output_path / 'manual_clusters_supertypes.html'))
+            print(f"  Saved: manual_clusters_supertypes.html")
+    else:
+        print("Skipping Sankey diagram (no cluster_labels_csv provided). Pass --cluster-labels-csv to enable.")
+
+    print(f"\nAll plots saved to: {plots_output_path}")

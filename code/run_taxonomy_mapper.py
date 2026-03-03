@@ -14,6 +14,7 @@ from config import TaxonomyMapperConfig
 from taxonomy_mapper import (
     create_input_adata,
     format_and_save_results,
+    generate_all_plots,
     load_abc_cache,
     prepare_taxonomy_filters,
     run_mapping,
@@ -113,7 +114,54 @@ def parse_args():
         type=int,
         help='Number of parallel workers for mapping'
     )
-    
+
+    # Plot generation arguments
+    parser.add_argument(
+        '--generate-plots',
+        action='store_true',
+        default=False,
+        help='Generate and save all standard plots after mapping completes'
+    )
+    parser.add_argument(
+        '--avg-corr-thresh',
+        type=float,
+        help='Average correlation threshold for filtering low-quality cells (default: 0.4)'
+    )
+    parser.add_argument(
+        '--agg-prob-thresh',
+        type=float,
+        help='Aggregate probability threshold (default: 0.25)'
+    )
+    parser.add_argument(
+        '--save-format',
+        type=str,
+        default='png',
+        choices=['png', 'svg', 'pdf'],
+        help='Output format for saved plots (default: png)'
+    )
+    parser.add_argument(
+        '--plot-slow-plots',
+        action='store_true',
+        default=False,
+        help='Also generate slow plots: UMAP and stacked violin (default: False)'
+    )
+    parser.add_argument(
+        '--cluster-labels-csv',
+        type=str,
+        help='Path to CSV with cluster labels for Sankey diagram (optional; skipped if not provided)'
+    )
+    parser.add_argument(
+        '--gene-order',
+        type=str,
+        nargs='+',
+        help='Priority gene order for expression plots (e.g., --gene-order GFP Gad2 Sst Pvalb)'
+    )
+    parser.add_argument(
+        '--overwrite-plots',
+        action='store_true',
+        help='Overwrite existing plot files'
+    )
+
     return parser.parse_args()
 
 
@@ -274,6 +322,35 @@ def main():
             format_params
         )
     
+    # Step 6: Generate plots
+    if args.generate_plots:
+        print("\n" + "="*80)
+        print("STEP 6: Generating plots")
+        print("="*80)
+
+        # Apply CLI overrides on top of any values from params.json
+        plot_config = config.plot_config
+        if args.avg_corr_thresh is not None:
+            plot_config.avg_corr_thresh = args.avg_corr_thresh
+        if args.agg_prob_thresh is not None:
+            plot_config.agg_prob_thresh = args.agg_prob_thresh
+        if args.save_format:
+            plot_config.save_format = args.save_format
+            plot_config.save_plot_params['format'] = args.save_format
+        if args.plot_slow_plots:
+            plot_config.plot_slow_plots = True
+        if args.cluster_labels_csv:
+            plot_config.cluster_labels_csv = args.cluster_labels_csv
+        if args.gene_order:
+            plot_config.gene_order = args.gene_order
+        if args.overwrite_plots:
+            plot_config.overwrite_plots = True
+
+        plots_output_path = dataset_output_folder / 'plots'
+        generate_all_plots(mapped_adata_path, plots_output_path, plot_config)
+    else:
+        print("\nSkipping plot generation. Pass --generate-plots to enable.")
+
     print("\n" + "="*80)
     print("PIPELINE COMPLETE")
     print("="*80)

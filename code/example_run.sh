@@ -16,4 +16,5 @@ python run_taxonomy_mapper.py \
     --num-workers 4 \
     --overwrite-input \
     --overwrite-mapping \
-    --overwrite-formatted
+    --overwrite-formatted \
+    --generate-plots
