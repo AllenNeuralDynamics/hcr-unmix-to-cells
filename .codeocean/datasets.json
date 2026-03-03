@@ -1,0 +1,13 @@
+{
+	"version": 1,
+	"attached_datasets": [
+		{
+			"id": "b76f5c2c-d94b-426b-b861-699ea0a63889",
+			"mount": "abc_atlas"
+		},
+		{
+			"id": "be2d8b89-ade9-4333-9388-1b60d0752cb1",
+			"mount": "HCR_767018_Oregano_251104"
+		}
+	]
+}

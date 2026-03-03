@@ -1,0 +1,45 @@
+{
+	"version": 1,
+	"base_image": "codeocean/code-server-python-extensions-pack:code-server4.108.2python3.12.4aind-metadata-mcp0.5.2withDOTFILES_REPOsupport",
+	"options": {
+		"registry_host_arg": true,
+		"git_ask_pass": true,
+		"mount_secrets": true
+	},
+	"installers": {
+		"pip": {
+			"packages": [
+				{
+					"name": "aind-data-access-api[docdb]",
+					"version": "1.9.3"
+				},
+				{
+					"name": "codeocean",
+					"version": "0.14.0"
+				},
+				{
+					"name": "git+https://github.com/AllenInstitute/cell_type_mapper.git#egg=cell-type-mapper",
+					"version": "79049fc679525ab79de2462ae23ed91ac2bfd554"
+				},
+				{
+					"name": "git+https://github.com/AllenInstitute/xenium_analysis_tools#egg=xenium-analysis-tools",
+					"version": "7844a9e5c3d2298316389e9392949db8fce0d34b"
+				},
+				{
+					"name": "git+https://github.com/AllenNeuralDynamics/aind-hcr-data-loader.git#egg=aind-hcr-data-loader",
+					"version": "1cb418df118bf6833b552b4c05c3c809c375f2b7"
+				},
+				{
+					"name": "git+https://github.com/AllenNeuralDynamics/aind-hcr-qc.git#egg=aind-hcr-qc",
+					"version": "c7c3421b67fdfd555fdc7c3cddf852977b032407"
+				},
+				{
+					"name": "plotly",
+					"version": "6.6.0"
+				}
+			],
+			"options": {},
+			"pre_install_options": {}
+		}
+	}
+}
