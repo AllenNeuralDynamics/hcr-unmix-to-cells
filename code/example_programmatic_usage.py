@@ -97,12 +97,7 @@ def run_custom_mapping():
     
     # Step 4: Run mapping
     if not (basic_results_path.exists() and extended_results_path.exists()):
-        mapping_params_dict = {
-            'normalization': config.mapping_params.normalization,
-            'bootstrap_iteration': config.mapping_params.bootstrap_iteration,
-            'bootstrap_factor': config.mapping_params.bootstrap_factor,
-            'n_runners_up': config.mapping_params.n_runners_up,
-        }
+        mapping_params_dict = config.mapping_params.to_dict()
         
         run_mapping(
             query_path,
@@ -116,11 +111,14 @@ def run_custom_mapping():
     
     # Step 5: Format results
     if not mapped_adata_path.exists():
+        format_params = config.mapping_params.to_dict()
+        format_params['nodes_to_drop'] = nodes_to_drop
+        
         format_and_save_results(
             extended_results_path,
             mapped_adata_path,
             query_path,
-            {'nodes_to_drop': nodes_to_drop}
+            format_params
         )
     
     print(f"\nMapping complete! Results saved to: {output_folder}")

@@ -37,6 +37,13 @@ class MappingParams:
     nodes_to_drop: Optional[List[Tuple[str, str]]] = None
     num_workers: int = 4
     
+    # Additional params needed by format_mapping_outputs
+    drop_level: str = 'supertype'
+    mapping_type: str = 'hrc'
+    clobber: str = '1'
+    chunk_size: int = 15000
+    rng_seed: int = 42
+    
     @classmethod
     def from_dict(cls, config: Dict) -> 'MappingParams':
         """Create MappingParams from dictionary."""
@@ -44,9 +51,29 @@ class MappingParams:
             normalization=config.get('normalization', 'raw'),
             bootstrap_iteration=config.get('bootstrap_iteration', 100),
             bootstrap_factor=config.get('bootstrap_factor', 0.95),
-            n_runners_up=config.get('n_runners_up', 2),
-            num_workers=config.get('num_workers', 4)
+            n_runners_up=config.get('n_runners_up', config.get('n_runner_ups', 2)),
+            num_workers=config.get('num_workers', 4),
+            drop_level=config.get('drop_level', 'supertype'),
+            mapping_type=config.get('mapping_type', 'hrc'),
+            clobber=str(config.get('clobber', '1')),
+            chunk_size=config.get('chunk_size', 15000),
+            rng_seed=config.get('rng_seed', 42)
         )
+    
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for passing to mapping functions."""
+        return {
+            'normalization': self.normalization,
+            'bootstrap_iteration': self.bootstrap_iteration,
+            'bootstrap_factor': self.bootstrap_factor,
+            'n_runners_up': self.n_runners_up,
+            'num_workers': self.num_workers,
+            'drop_level': self.drop_level,
+            'mapping_type': self.mapping_type,
+            'clobber': self.clobber,
+            'chunk_size': self.chunk_size,
+            'rng_seed': self.rng_seed
+        }
 
 
 @dataclass

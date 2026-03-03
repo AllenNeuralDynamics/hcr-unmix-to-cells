@@ -238,17 +238,13 @@ def main():
     print("STEP 4: Running cell type mapping")
     print("="*80)
     
+    # Build complete mapping params dict
+    mapping_params_dict = config.mapping_params.to_dict()
+    
     if (basic_results_path.exists() and extended_results_path.exists() 
         and not config.overwrite_mapping_results):
         print(f"Mapping results already exist. Skipping mapping.")
     else:
-        mapping_params_dict = {
-            'normalization': config.mapping_params.normalization,
-            'bootstrap_iteration': config.mapping_params.bootstrap_iteration,
-            'bootstrap_factor': config.mapping_params.bootstrap_factor,
-            'n_runners_up': config.mapping_params.n_runners_up,
-        }
-        
         run_mapping(
             query_path,
             extended_results_path,
@@ -267,11 +263,15 @@ def main():
     if mapped_adata_path.exists() and not config.overwrite_formatted_outputs:
         print(f"Formatted mapping output already exists at {mapped_adata_path}.")
     else:
+        # Add nodes_to_drop to params for formatting
+        format_params = mapping_params_dict.copy()
+        format_params['nodes_to_drop'] = nodes_to_drop
+        
         format_and_save_results(
             extended_results_path,
             mapped_adata_path,
             query_path,
-            {'nodes_to_drop': nodes_to_drop}
+            format_params
         )
     
     print("\n" + "="*80)
