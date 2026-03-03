@@ -122,23 +122,3 @@ scratch_root/
         ├── extended_results.json
         └── mapped_cellxgene.h5ad
 ```
-
-## Migration from Original Script
-
-The original `map_taxonomy.py` script has been refactored into this modular structure. To replicate the original behavior:
-
-```bash
-python run_taxonomy_mapper.py \
-    --input-csv /root/capsule/data/HCR_767018_Oregano_251104/767018_Oregano_251104_inhibitory_clustered_cellxgene_lognorm.csv \
-    --drop-layers VISp6a VISp6b \
-    --n-runners-up 2 \
-    --overwrite-all
-```
-
-## Benefits of Refactored Structure
-
-1. **Modularity**: Clear separation of concerns (config, core logic, CLI)
-2. **Reusability**: Functions can be imported and used programmatically
-3. **Testability**: Each function can be unit tested independently
-4. **Flexibility**: Easy parameter override via CLI or programmatic use
-5. **Maintainability**: Cleaner code organization and documentation
