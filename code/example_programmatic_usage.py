@@ -30,9 +30,12 @@ def run_custom_mapping():
     # Load configuration
     config = TaxonomyMapperConfig.from_json('/root/capsule/code/params.json')
     
+    # Set input CSV path
+    cellxgene_path = Path('/root/capsule/data/HCR_767018_Oregano_251104/767018_Oregano_251104_inhibitory_clustered_cellxgene_lognorm.csv')
+    
     # Customize configuration
-    config.dataset_folder = Path('/root/capsule/data/HCR_767018_Oregano_251104')
-    config.data_csv = '767018_Oregano_251104_inhibitory_clustered_cellxgene_lognorm.csv'
+    config.dataset_folder = cellxgene_path.parent
+    config.data_csv = cellxgene_path.name
     config.log_norm_data = True
     config.drop_layers = ['VISp6a', 'VISp6b']
     config.output_folder_name = 'custom_oregano_mapping'
@@ -41,8 +44,11 @@ def run_custom_mapping():
     config.mapping_params.bootstrap_iteration = 150
     config.mapping_params.n_runners_up = 3
     
+    # Validate input exists
+    if not cellxgene_path.exists():
+        raise FileNotFoundError(f"Input CSV not found: {cellxgene_path}")
+    
     # Set up paths
-    cellxgene_path = config.dataset_folder / config.data_csv
     input_folder, output_folder, _ = config.get_output_paths()
     input_folder.mkdir(parents=True, exist_ok=True)
     output_folder.mkdir(parents=True, exist_ok=True)

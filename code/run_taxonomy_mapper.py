@@ -39,16 +39,10 @@ def parse_args():
         help='Path to configuration JSON file'
     )
     parser.add_argument(
-        '--dataset-folder',
+        '--input-csv',
         type=str,
         required=True,
-        help='Path to dataset folder containing input CSV'
-    )
-    parser.add_argument(
-        '--data-csv',
-        type=str,
-        required=True,
-        help='Name of input CSV file in dataset folder'
+        help='Path to input CSV file (cellxgene data)'
     )
     
     # Optional arguments
@@ -134,9 +128,15 @@ def main():
     print(f"Loading configuration from {args.config}")
     config = TaxonomyMapperConfig.from_json(args.config)
     
+    # Parse input CSV path
+    cellxgene_path = Path(args.input_csv)
+    if not cellxgene_path.exists():
+        print(f"Error: Input file not found: {cellxgene_path}")
+        sys.exit(1)
+    
     # Update config with command line arguments
-    config.dataset_folder = Path(args.dataset_folder)
-    config.data_csv = args.data_csv
+    config.dataset_folder = cellxgene_path.parent
+    config.data_csv = cellxgene_path.name
     config.log_norm_data = args.log_norm_data
     config.drop_layers = args.drop_layers
     
@@ -163,8 +163,7 @@ def main():
     if args.num_workers:
         config.mapping_params.num_workers = args.num_workers
     
-    # Set up paths
-    cellxgene_path = config.dataset_folder / config.data_csv
+    # Validate input file exists
     if not cellxgene_path.exists():
         print(f"Error: Input file not found: {cellxgene_path}")
         sys.exit(1)
@@ -173,8 +172,7 @@ def main():
     input_folder.mkdir(parents=True, exist_ok=True)
     output_folder.mkdir(parents=True, exist_ok=True)
     
-    print(f"\nDataset folder: {config.dataset_folder}")
-    print(f"Input CSV: {config.data_csv}")
+    print(f"\nInput CSV: {cellxgene_path}")
     print(f"Output folder: {dataset_output_folder}")
     
     # Define output file paths

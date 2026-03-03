@@ -6,8 +6,7 @@
 
 python run_taxonomy_mapper.py \
     --config /root/capsule/code/params.json \
-    --dataset-folder /root/capsule/data/HCR_767018_Oregano_251104 \
-    --data-csv 767018_Oregano_251104_inhibitory_clustered_cellxgene_lognorm.csv \
+    --input-csv /root/capsule/data/HCR_767018_Oregano_251104/767018_Oregano_251104_inhibitory_clustered_cellxgene_lognorm.csv \
     --output-name 767018_Oregano_251104_inhibitory_clustered_cellxgene_lognorm_runners_up \
     --log-norm-data \
     --drop-layers VISp6a VISp6b \

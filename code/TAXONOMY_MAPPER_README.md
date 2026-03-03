@@ -31,8 +31,7 @@ The pipeline is now organized into three main modules:
 
 ```bash
 python run_taxonomy_mapper.py \
-    --dataset-folder /path/to/dataset \
-    --data-csv input_data.csv
+    --input-csv /path/to/input_data.csv
 ```
 
 ### Advanced Usage
@@ -40,8 +39,7 @@ python run_taxonomy_mapper.py \
 ```bash
 python run_taxonomy_mapper.py \
     --config /path/to/params.json \
-    --dataset-folder /root/capsule/data/HCR_767018_Oregano_251104 \
-    --data-csv 767018_Oregano_251104_inhibitory_clustered_cellxgene_lognorm.csv \
+    --input-csv /root/capsule/data/HCR_767018_Oregano_251104/767018_Oregano_251104_inhibitory_clustered_cellxgene_lognorm.csv \
     --output-name oregano_inhibitory_mapping \
     --drop-layers VISp6a VISp6b \
     --bootstrap-iteration 100 \
@@ -54,8 +52,7 @@ python run_taxonomy_mapper.py \
 ### Command-Line Arguments
 
 #### Required
-- `--dataset-folder`: Path to dataset folder containing input CSV
-- `--data-csv`: Name of input CSV file
+- `--input-csv`: Path to input CSV file (cellxgene data)
 
 #### Optional
 - `--config`: Path to configuration JSON file (default: `/root/capsule/code/params.json`)
@@ -132,8 +129,7 @@ The original `map_taxonomy.py` script has been refactored into this modular stru
 
 ```bash
 python run_taxonomy_mapper.py \
-    --dataset-folder /root/capsule/data/HCR_767018_Oregano_251104 \
-    --data-csv 767018_Oregano_251104_inhibitory_clustered_cellxgene_lognorm.csv \
+    --input-csv /root/capsule/data/HCR_767018_Oregano_251104/767018_Oregano_251104_inhibitory_clustered_cellxgene_lognorm.csv \
     --drop-layers VISp6a VISp6b \
     --n-runners-up 2 \
     --overwrite-all
