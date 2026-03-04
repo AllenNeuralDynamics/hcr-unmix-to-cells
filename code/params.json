@@ -65,7 +65,7 @@
             "drop_level": "supertype",
             "mapping_type": "hrc",
             "bootstrap_iteration": 100,
-            "bootstrap_factor": 0.5,
+            "bootstrap_factor": 0.95,
             "n_runner_ups": 0,
             "clobber": "1",
             "chunk_size": 15000,

@@ -192,7 +192,7 @@ def run_mapping(
     type_assignment = {
         'normalization': mapping_params.get('normalization', 'raw'),
         'bootstrap_iteration': mapping_params.get('bootstrap_iteration', 100),
-        'bootstrap_factor': mapping_params.get('bootstrap_factor', 0.95),
+        'bootstrap_factor': mapping_params.get('bootstrap_factor', 1.0),
         'n_runners_up': mapping_params.get('n_runners_up', 2),
     }
     
@@ -205,7 +205,7 @@ def run_mapping(
         'query_path': query_path,
         'extended_result_path': str(extended_result_path),
         'csv_result_path': str(basic_result_path),
-        'flatten': False,
+        'flatten': True,
         'precomputed_stats': {'path': precomputed_stats_path},
         'query_markers': {'serialized_lookup': mouse_markers_path},
         'type_assignment': type_assignment,

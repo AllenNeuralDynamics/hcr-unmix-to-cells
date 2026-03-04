@@ -32,7 +32,8 @@ class MappingParams:
     """Parameters for cell type mapping."""
     normalization: str = 'raw'
     bootstrap_iteration: int = 100
-    bootstrap_factor: float = 0.95
+    #bootstrap_factor: float = 0.95
+    bootstrap_factor: float = 1.0
     n_runners_up: int = 2
     nodes_to_drop: Optional[List[Tuple[str, str]]] = None
     num_workers: int = 4
