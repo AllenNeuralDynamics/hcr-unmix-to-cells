@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+
+# install MJD fork of spot detection pipeline
+pip install git+https://github.com/mattjdavis/aind-spot-spectral-unmixing.git@hack-for-capsule-mjd
