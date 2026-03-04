@@ -4,13 +4,15 @@ import os
 from pathlib import Path
 
 from codeocean import CodeOcean
-from spot_analysis.spot_pipeline import SpotPipelineConfig, run_spot_pipeline_v2
+from aind_spot_spectral_unmixing.spot_analysis.spot_pipeline import SpotPipelineConfig, run_spot_pipeline_v2
 from aind_hcr_data_loader.hcr_dataset import create_hcr_dataset_from_config
 
 
 DATA_DIR = Path("/root/capsule/data")
 CONFIG_PATH = "/root/capsule/code/MOUSE_HCR_CONFIG.json"
 
+os.environ['CODEOCEAN_TOKEN'] = os.environ.get('API_SECRET')
+os.environ['CODEOCEAN_DOMAIN'] = "https://codeocean.allenneuraldynamics.org/"
 
 def attach_dataset_assets_from_HCRdataset(ds):
     """
@@ -20,11 +22,12 @@ def attach_dataset_assets_from_HCRdataset(ds):
     Args:
         ds: HCRDataset object (ds.name is used to query asset titles)
     """
+
     co = CodeOcean(
-        api_token=os.environ["CODE_OCEAN_TOKEN"],
-        base_url=os.environ.get("CODE_OCEAN_URL"),
+        api_token=os.environ["CODEOCEAN_TOKEN"],
+        base_url=os.environ.get("CODEOCEAN_DOMAIN"),
     )
-    capsule_id = os.environ["CODE_OCEAN_CAPSULE_ID"]
+    capsule_id = os.environ["CO_CAPSULE_ID"]
 
     asset_attach_params = []
 
@@ -63,8 +66,8 @@ def run_pairwise_unmix(mouse_id, input_dir, output_dir):
         unmixing_method ="reassignment",
         #channel_pairs = # default works well for 6 and 3 channel
         spatial_scale =  (1.0, 0.24, 0.24),
-        ratio_spot_filter_method = "95percentile"
-
+        ratio_spot_filter_method = "95percentile",
+        output_base_folder = Path("/root/capsule/scratch")
     )
 
     ds = create_hcr_dataset_from_config(
