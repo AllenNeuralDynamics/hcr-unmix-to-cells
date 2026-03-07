@@ -56,7 +56,13 @@ if __name__ == "__main__":
         help="Mouse ID used to locate the pairwise-unmixing data asset "
              "(e.g. 767018 → HCR_767018_pairwise-unmixing_*/)",
     )
-    # Consume only --mouse-id; pass everything else straight to the mapper
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="/root/capsule/results",
+        help="Base directory for all outputs (default: /root/capsule/results)",
+    )
+    # Consume only known args; pass everything else straight to the mapper
     args, remaining = parser.parse_known_args()
 
     asset_folder = find_pairwise_unmixing_asset(args.mouse_id)
@@ -76,7 +82,8 @@ if __name__ == "__main__":
         "--config", "/root/capsule/code/params.json",
         "--input-csv", str(input_csv),
         "--output-name", output_name,
-        "--log-norm-data",
+        "--output-dir", args.output_dir,
+        #"--log-norm-data", # using raw counts, dont need
         "--drop-layers", "VISp6a", "VISp6b",
         "--bootstrap-iteration", "100",
         "--bootstrap-factor", "1.0",

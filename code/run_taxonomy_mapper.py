@@ -53,16 +53,14 @@ def parse_args():
         help='Custom output folder name (default: derived from input CSV name)'
     )
     parser.add_argument(
-        '--log-norm-data',
-        action='store_true',
-        default=True,
-        help='Input data is log-normalized (will apply expm1)'
+        '--output-dir',
+        type=str,
+        help='Base directory for all outputs (overrides scratch_root in params.json)'
     )
     parser.add_argument(
-        '--no-log-norm-data',
-        dest='log_norm_data',
-        action='store_false',
-        help='Input data is NOT log-normalized'
+        '--log-norm-data',
+        action='store_true',
+        help='Input data is log-normalized; applies expm1 before mapping.'
     )
     parser.add_argument(
         '--drop-layers',
@@ -190,6 +188,8 @@ def main():
     
     if args.output_name:
         config.output_folder_name = args.output_name
+    if args.output_dir:
+        config.paths.scratch_root = Path(args.output_dir)
     
     # Set overwrite flags
     if args.overwrite_all:

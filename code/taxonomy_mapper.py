@@ -61,8 +61,12 @@ def create_input_adata(
     print(f"Identified cluster columns in cellxgene data: {cluster_cols}")
     
     # Create cell metadata
-    obs = cellxgene[cell_id_col + cluster_cols]
+    obs = cellxgene[cell_id_col + cluster_cols].copy()
     obs.rename(columns={col: f'hcr_{col}' for col in cluster_cols}, inplace=True)
+    # Set cell_id as the obs index so AnnData obs_names carry the real IDs
+    if cell_id_col:
+        obs = obs.set_index(cell_id_col[0])
+        obs.index = obs.index.astype(str)
     cellxgene.set_index(cell_id_col, inplace=True)
     cellxgene.drop(columns=cluster_cols, inplace=True)
     
