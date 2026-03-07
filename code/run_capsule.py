@@ -1,139 +1,93 @@
-""" top level run script """
+"""
+Top-level run script – thin wrapper around run_taxonomy_mapper.main().
+
+Pass --mouse-id <ID> and this script will locate the pairwise-unmixing asset
+that was mounted under /root/capsule/data, derive the input CSV path, and
+forward everything to run_taxonomy_mapper with sensible defaults.
+
+Example
+-------
+python run_capsule.py --mouse-id 767018
+# or with overrides:
+python run_capsule.py --mouse-id 767018 --num-workers 8 --no-generate-plots
+"""
+
 import argparse
-import os
+import sys
 from pathlib import Path
 
-from codeocean import CodeOcean
-from aind_spot_spectral_unmixing.spot_analysis.spot_pipeline import SpotPipelineConfig, run_spot_pipeline_v2
-from aind_hcr_data_loader.hcr_dataset import create_hcr_dataset_from_config
+from run_taxonomy_mapper import main as _mapper_main
+
+DATA_ROOT = Path("/root/capsule/data")
+UNMIXED_CSV_SUBPATH = "inhibitory_cells_unmixed/unmixed_inhibitory_cells.csv"
 
 
-DATA_DIR = Path("/root/capsule/data")
-CONFIG_PATH = "/root/capsule/code/MOUSE_HCR_CONFIG.json"
+def find_pairwise_unmixing_asset(mouse_id: str, data_root: Path = DATA_ROOT) -> Path:
+    """Return the pairwise-unmixing folder for *mouse_id*.
 
-os.environ['CODEOCEAN_TOKEN'] = os.environ.get('API_SECRET')
-os.environ['CODEOCEAN_DOMAIN'] = "https://codeocean.allenneuraldynamics.org/"
+    Looks for a directory matching ``HCR_{mouse_id}_pairwise-unmixing_*``
+    inside *data_root* and returns the first match.
 
-def attach_dataset_assets_from_HCRdataset(ds):
+    Raises
+    ------
+    FileNotFoundError
+        If no matching folder is found.
     """
-    For each round in the dataset, search for a data asset by the dataset name
-    and attach it to the capsule.
-
-    Args:
-        ds: HCRDataset object (ds.name is used to query asset titles)
-    """
-
-    co = CodeOcean(
-        api_token=os.environ["CODEOCEAN_TOKEN"],
-        base_url=os.environ.get("CODEOCEAN_DOMAIN"),
-    )
-    capsule_id = os.environ["CO_CAPSULE_ID"]
-
-    asset_attach_params = []
-
-    for round_key in ds.rounds.keys():
-        title = ds.name  # use dataset name as the asset title to search for
-        search_results = co.data_assets.search(query=f"name:{title}")
-
-        if search_results and len(search_results) > 0:
-            asset_id = search_results[0]["id"]
-            asset_attach_params.append({
-                "id": asset_id,
-                "mount": f"/data/{title}",
-            })
-        else:
-            print(f"Warning: Asset '{title}' not found for round '{round_key}'")
-
-    if asset_attach_params:
-        co.capsules.attach_data_assets(
-            capsule_id=capsule_id,
-            attach_params=asset_attach_params,
+    pattern = f"HCR_{mouse_id}_pairwise-unmixing_*"
+    matches = sorted(data_root.glob(pattern))
+    if not matches:
+        raise FileNotFoundError(
+            f"No pairwise-unmixing asset found for mouse_id={mouse_id!r} "
+            f"(searched {data_root / pattern})"
         )
-        print(f"Attached {len(asset_attach_params)} data assets to capsule {capsule_id}")
-    else:
-        print("No assets found to attach.")
+    # Use the most-recent folder if multiple timestamps exist
+    return matches[-1]
 
-    return asset_attach_params
-
-
-def run_pairwise_unmix(mouse_id, input_dir, output_dir):
-    """Run the pairwise unmixing pipeline on all datasets found in input_dir."""
-    config = SpotPipelineConfig(
-        expt_key="pairwise_unmxing",
-        min_distances=[1],
-        dist_cutoff=1.0,
-        do_clean_spots = False,  # default is True, maybe I used this in my test?
-        unmixing_method ="reassignment",
-        #channel_pairs = # default works well for 6 and 3 channel
-        spatial_scale =  (1.0, 0.24, 0.24),
-        ratio_spot_filter_method = "95percentile",
-        output_base_folder = Path("/root/capsule/scratch")
-    )
-
-    ds = create_hcr_dataset_from_config(
-        mouse_id,
-        data_dir=DATA_DIR,
-        config_path=CONFIG_PATH,
-    )
-    attach_dataset_assets_from_HCRdataset(ds)
-
-    for round_key in ["R2"]:
-    #for round_key in ds.rounds.keys():
-        results = run_spot_pipeline_v2({mouse_id: ds}, mouse_id, round_key, config)
-
-        #print(f"\nOutput folder: {results['output_folder']}")
-        #print(f"Mixed total counts:   {results['mixed_results']['spot_count'].sum()}")
-        #print(f"Unmixed total counts: {results['unmixed_results']['spot_count'].sum()}")
-
-    return results
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run capsule pipeline")
-    parser.add_argument(
-        "--do-pairwise-unmix",
-        action="store_true",
-        help="Whether to perform new pairwise unmixing analysis",
-    )
-    parser.add_argument(
-        "--do-taxonomy-mapping",
-        action="store_true",
-        help="Whether to perform taxonomy mapping",
-    )
-    parser.add_argument(
-        "--cell-by-gene-path",
-        type=str,
-        default=None,
-        help="Path to the cell-by-gene file",
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=str,
-        default="../results/",
-        help="Directory to save the output",
-    )
-    parser.add_argument(
-        "--input-dir",
-        type=str,
-        default="../data/",
-        help="Input directory",
+    parser = argparse.ArgumentParser(
+        description="Run capsule – taxonomy mapping wrapper",
+        add_help=True,
     )
     parser.add_argument(
         "--mouse-id",
         type=str,
-        default=None,
-        help="Mouse ID (required when --do-pairwise-unmix is set)",
+        required=True,
+        help="Mouse ID used to locate the pairwise-unmixing data asset "
+             "(e.g. 767018 → HCR_767018_pairwise-unmixing_*/)",
     )
-    args = parser.parse_args()
+    # Consume only --mouse-id; pass everything else straight to the mapper
+    args, remaining = parser.parse_known_args()
 
-    if args.do_pairwise_unmix and not args.mouse_id:
-        parser.error("--mouse-id is required when --do-pairwise-unmix is set")
-    
+    asset_folder = find_pairwise_unmixing_asset(args.mouse_id)
+    input_csv = asset_folder / UNMIXED_CSV_SUBPATH
 
-    input_dir = Path(args.input_dir).resolve()
-    output_dir = Path(args.output_dir).resolve()
+    if not input_csv.exists():
+        sys.exit(f"Error: expected CSV not found: {input_csv}")
 
-    if args.do_pairwise_unmix:
-        run_pairwise_unmix(args.mouse_id, input_dir, output_dir)
+    output_name = asset_folder.name  # e.g. HCR_767018_pairwise-unmixing_2026-03-06_12-00-00
 
-    if args.do_taxonomy_mapping:
-        pass  # TODO
+    print(f"Found asset : {asset_folder}")
+    print(f"Input CSV   : {input_csv}")
+    print(f"Output name : {output_name}")
+
+    # Build argv for run_taxonomy_mapper, applying defaults then any user overrides
+    defaults = [
+        "--config", "/root/capsule/code/params.json",
+        "--input-csv", str(input_csv),
+        "--output-name", output_name,
+        "--log-norm-data",
+        "--drop-layers", "VISp6a", "VISp6b",
+        "--bootstrap-iteration", "100",
+        "--bootstrap-factor", "1.0",
+        "--n-runners-up", "2",
+        "--num-workers", "4",
+        "--overwrite-input",
+        "--overwrite-mapping",
+        "--overwrite-formatted",
+        "--generate-plots",
+    ]
+
+    # remaining args from the user override / extend the defaults
+    sys.argv = [sys.argv[0]] + defaults + remaining
+    _mapper_main()
