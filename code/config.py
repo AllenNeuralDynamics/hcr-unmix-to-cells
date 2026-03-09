@@ -81,8 +81,8 @@ class MappingParams:
 class FilterConfig:
     """Configuration for V1 MERFISH filtering."""
     enabled: bool = True
-    h_level: str = 'subclass'
-    min_cells: int = 0
+    h_level: str = 'supertype',
+    min_cells: int = 10
     saved_df_name: Optional[str] = 'v1_merfish_cells.csv'
     
     @classmethod
