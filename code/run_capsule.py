@@ -33,7 +33,7 @@ from pathlib import Path
 from run_taxonomy_mapper import main as _mapper_main
 
 DATA_ROOT          = Path("/root/capsule/data")
-PIPELINE_DATA_ROOT = Path("/root/capsule/pipeline_data")
+PIPELINE_DATA_ROOT = Path("/root/capsule/data/pipeline_data")
 UNMIXED_CSV_SUBPATH = "inhibitory_cells_unmixed/unmixed_inhibitory_cells.csv"
 UNMIXED_ALL_CELLS_SUBPATH = "all_cells_unmixed/unmixed_all_cells.csv"
 
