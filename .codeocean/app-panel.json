@@ -7,8 +7,7 @@
 			"name": "--mouse-id",
 			"param_name": "mouse-id",
 			"type": "text",
-			"value_type": "string",
-			"required": true
+			"value_type": "string"
 		}
 	]
 }
