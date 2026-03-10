@@ -90,8 +90,8 @@ class FilterConfig:
         """Create FilterConfig from dictionary."""
         return cls(
             enabled=config.get('enabled', True),
-            h_level=config.get('h_level', 'subclass'),
-            min_cells=config.get('min_cells', 0),
+            h_level=config.get('h_level', 'supertype'),
+            min_cells=config.get('min_cells', 10),
             saved_df_name=config.get('saved_df_name', 'v1_merfish_cells.csv')
         )
 

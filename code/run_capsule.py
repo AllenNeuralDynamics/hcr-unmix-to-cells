@@ -4,13 +4,13 @@ Top-level run script – thin wrapper around run_taxonomy_mapper.main().
 Two run modes are supported:
 
 Pipeline mode (automatic)
-    If the folder ``/root/capsule/pipeline_data`` exists the script reads the
+    If the folder ``/data/pipeline_data`` exists the script reads the
     single ``.txt`` file inside it and uses its stem (filename without the
     ``.txt`` extension) as the mouse ID.
 
     Expected layout::
 
-        /root/capsule/pipeline_data/
+        /data/pipeline_data/
             767018.txt          ← stem becomes mouse_id
 
 Standalone mode
@@ -33,7 +33,7 @@ from pathlib import Path
 from run_taxonomy_mapper import main as _mapper_main
 
 DATA_ROOT          = Path("/root/capsule/data")
-PIPELINE_DATA_ROOT = Path("/root/capsule/data/pipeline_data")
+PIPELINE_DATA_ROOT = Path("/data/pipeline_data")
 UNMIXED_CSV_SUBPATH = "inhibitory_cells_unmixed/unmixed_inhibitory_cells.csv"
 UNMIXED_ALL_CELLS_SUBPATH = "all_cells_unmixed/unmixed_all_cells.csv"
 
