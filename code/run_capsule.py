@@ -159,11 +159,11 @@ if __name__ == "__main__":
             "input_csv": inhibitory_csv,
             "output_dir": str(Path(args.output_dir) / "inhibitory_cells"),
         },
-        {
-            "label":     "all_cells",
-            "input_csv": all_cells_csv,
-            "output_dir": str(Path(args.output_dir) / "all_cells"),
-        },
+        # {
+        #     "label":     "all_cells",
+        #     "input_csv": all_cells_csv,
+        #     "output_dir": str(Path(args.output_dir) / "all_cells"),
+        # },
     ]
 
     for run in runs:
