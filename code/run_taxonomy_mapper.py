@@ -355,6 +355,15 @@ def main():
     import json as _json
     import datetime as _dt
 
+    # Pull the full MapMyCells config (type_assignment, query_markers, etc.)
+    # from the extended results JSON that MapMyCells wrote.
+    mapmycells_config = {}
+    if extended_results_path.exists():
+        with open(extended_results_path) as _ef:
+            _ext = _json.load(_ef)
+        # Top-level keys other than 'results' and 'taxonomy_tree' are the MapMyCells run config
+        mapmycells_config = {k: v for k, v in _ext.items() if k not in ("results", "taxonomy_tree")}
+
     run_params_snapshot = {
         "run_timestamp": _dt.datetime.now().isoformat(),
         "input_csv": str(cellxgene_path),
@@ -377,6 +386,7 @@ def main():
             "gene_order": config.plot_config.gene_order,
             "cluster_labels_csv": config.plot_config.cluster_labels_csv,
         },
+        "mapmycells_config": mapmycells_config,
     }
     run_params_path = dataset_output_folder / "run_params.json"
     with open(run_params_path, "w") as _f:

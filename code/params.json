@@ -47,8 +47,8 @@
         "validate_input": true,
         "filter_mapping_v1_types": {
             "enabled": true,
-            "h_level": "subclass",
-            "min_cells": 0,
+            "h_level": "supertype",
+            "min_cells": 10,
             "saved_df_name": "v1_merfish_cells.csv"
         },
         "drop_nodes_dict": null,
@@ -65,7 +65,7 @@
             "drop_level": "supertype",
             "mapping_type": "hrc",
             "bootstrap_iteration": 100,
-            "bootstrap_factor": 0.95,
+            "bootstrap_factor": 1.0,
             "n_runner_ups": 0,
             "clobber": "1",
             "chunk_size": 15000,
