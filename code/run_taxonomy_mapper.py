@@ -351,6 +351,38 @@ def main():
     else:
         print("\nSkipping plot generation. Pass --generate-plots to enable.")
 
+    # Step 7: Save run params snapshot
+    import json as _json
+    import datetime as _dt
+
+    run_params_snapshot = {
+        "run_timestamp": _dt.datetime.now().isoformat(),
+        "input_csv": str(cellxgene_path),
+        "output_folder": str(output_folder),
+        "log_norm_data": config.log_norm_data,
+        "drop_layers": config.drop_layers,
+        "drop_nodes_dict": config.drop_nodes_dict,
+        "mapping_params": mapping_params_dict,
+        "filter_config": {
+            "enabled": config.filter_config.enabled,
+            "h_level": config.filter_config.h_level,
+            "min_cells": config.filter_config.min_cells,
+            "saved_df_name": config.filter_config.saved_df_name,
+        },
+        "plot_config": {
+            "avg_corr_thresh": config.plot_config.avg_corr_thresh,
+            "agg_prob_thresh": config.plot_config.agg_prob_thresh,
+            "save_format": config.plot_config.save_format,
+            "plot_slow_plots": config.plot_config.plot_slow_plots,
+            "gene_order": config.plot_config.gene_order,
+            "cluster_labels_csv": config.plot_config.cluster_labels_csv,
+        },
+    }
+    run_params_path = dataset_output_folder / "run_params.json"
+    with open(run_params_path, "w") as _f:
+        _json.dump(run_params_snapshot, _f, indent=2, default=str)
+    print(f"\nRun params saved to: {run_params_path}")
+
     print("\n" + "="*80)
     print("PIPELINE COMPLETE")
     print("="*80)
@@ -358,6 +390,7 @@ def main():
     print(f"  - Basic results: {basic_results_path}")
     print(f"  - Extended results: {extended_results_path}")
     print(f"  - Mapped AnnData: {mapped_adata_path}")
+    print(f"  - Run params: {run_params_path}")
 
 
 if __name__ == '__main__':
