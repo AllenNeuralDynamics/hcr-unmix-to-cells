@@ -24,6 +24,8 @@ Example
 python run_capsule.py --mouse-id 767018
 # or with overrides:
 python run_capsule.py --mouse-id 767018 --num-workers 8 --no-generate-plots
+# choose spot set (default is filtered):
+python run_capsule.py --mouse-id 767018 --spots all_spots
 """
 
 import argparse
@@ -34,8 +36,35 @@ from run_taxonomy_mapper import main as _mapper_main
 
 DATA_ROOT          = Path("/root/capsule/data")
 PIPELINE_DATA_ROOT = Path("/data/pipeline_data")
-UNMIXED_CSV_SUBPATH = "inhibitory_cells_unmixed/unmixed_inhibitory_cells.csv"
-UNMIXED_ALL_CELLS_SUBPATH = "all_cells_unmixed/unmixed_all_cells.csv"
+SPOT_CHOICES = ("filtered", "all_spots")
+
+INHIBITORY_CSV_CANDIDATES_BY_SPOTS = {
+    "filtered": [
+        "inhibitory_cells_unmixed_filtered/unmixed_inhibitory_cells_filtered.csv",
+        "inhibitory_cells_unmixed_filtered/unmixed_inhibitory_cells.csv",
+        "inhibitory_cells_unmixed/unmixed_inhibitory_cells.csv",  # legacy
+    ],
+    "all_spots": [
+        "inhibitory_cells_unmixed_all_spots/unmixed_inhibitory_cells_all_spots.csv",
+        "inhibitory_cells_unmixed_all_spots/unmixed_inhibitory_cells.csv",
+        "inhibitory_cells_unmixed/unmixed_inhibitory_cells.csv",  # legacy
+    ],
+}
+
+ALL_CELLS_CSV_CANDIDATES_BY_SPOTS = {
+    "filtered": [
+        "all_cells_unmixed_filtered/unmixed_all_cells_filtered.csv",
+        "all_cells_unmixed_filtered/unmixed_all_cells.csv",
+        "all_cells_unmixed/unmixed_all_cells.csv",                # legacy
+        "unmixed_cell_by_gene_all_rounds.csv",                    # legacy fallback
+    ],
+    "all_spots": [
+        "all_cells_unmixed_all_spots/unmixed_all_cells_all_spots.csv",
+        "all_cells_unmixed_all_spots/unmixed_all_cells.csv",
+        "all_cells_unmixed/unmixed_all_cells.csv",                # legacy
+        "unmixed_cell_by_gene_all_rounds.csv",                    # legacy fallback
+    ],
+}
 
 
 def resolve_mouse_id_from_pipeline(pipeline_root: Path = PIPELINE_DATA_ROOT) -> str:
@@ -88,20 +117,13 @@ def find_pairwise_unmixing_asset(mouse_id: str, data_root: Path = DATA_ROOT) -> 
     return matches[-1]
 
 
-def find_all_cells_csv(asset_folder: Path) -> Path | None:
-    """Return the all-cells CSV, checking two candidate locations.
+def find_first_existing_csv(asset_folder: Path, candidate_subpaths: list[str]) -> Path | None:
+    """Return the first existing CSV from candidate relative subpaths.
 
-    Candidates (in order):
-    1. ``<asset_folder>/all_cells_unmixed/unmixed_all_cells.csv``
-    2. ``<asset_folder>/unmixed_cell_by_gene_all_rounds.csv``
-
-    Returns ``None`` if neither exists.
+    Returns ``None`` if none of the candidates exist.
     """
-    candidates = [
-        asset_folder / UNMIXED_ALL_CELLS_SUBPATH,
-        asset_folder / "unmixed_cell_by_gene_all_rounds.csv",
-    ]
-    for path in candidates:
+    for subpath in candidate_subpaths:
+        path = asset_folder / subpath
         if path.exists():
             return path
     return None
@@ -128,6 +150,13 @@ if __name__ == "__main__":
         default="/root/capsule/results",
         help="Base directory for all outputs (default: /root/capsule/results)",
     )
+    parser.add_argument(
+        "--spots",
+        type=str,
+        choices=SPOT_CHOICES,
+        default="filtered",
+        help="Which spot subset to run taxonomy mapping on: 'filtered' (default) or 'all_spots'.",
+    )
     # Consume only known args; pass everything else straight to the mapper
     args, remaining = parser.parse_known_args()
 
@@ -148,6 +177,7 @@ if __name__ == "__main__":
     output_name = asset_folder.name  # e.g. HCR_767018_pairwise-unmixing_2026-03-06_12-00-00
 
     print(f"Found asset : {asset_folder}")
+    print(f"Spot mode   : {args.spots}")
 
     # Some assets nest data under a pairwise_unmixing/ subfolder
     pairwise_subfolder = asset_folder / "pairwise_unmixing"
@@ -155,20 +185,26 @@ if __name__ == "__main__":
     print(f"CSV root    : {csv_root}")
 
     # --- resolve input CSVs ---------------------------------------------------
-    inhibitory_csv = csv_root / UNMIXED_CSV_SUBPATH
-    all_cells_csv  = find_all_cells_csv(csv_root)
+    inhibitory_csv = find_first_existing_csv(
+        csv_root,
+        INHIBITORY_CSV_CANDIDATES_BY_SPOTS[args.spots],
+    )
+    all_cells_csv = find_first_existing_csv(
+        csv_root,
+        ALL_CELLS_CSV_CANDIDATES_BY_SPOTS[args.spots],
+    )
 
     runs = [
         {
             "label":     "inhibitory_cells",
             "input_csv": inhibitory_csv,
-            "output_dir": str(Path(args.output_dir) / "inhibitory_cells"),
+            "output_dir": str(Path(args.output_dir) / f"inhibitory_cells_{args.spots}"),
         },
-        # {
-        #     "label":     "all_cells",
-        #     "input_csv": all_cells_csv,
-        #     "output_dir": str(Path(args.output_dir) / "all_cells"),
-        # },
+        {
+            "label":     "all_cells",
+            "input_csv": all_cells_csv,
+            "output_dir": str(Path(args.output_dir) / f"all_cells_{args.spots}"),
+        },
     ]
 
     for run in runs:

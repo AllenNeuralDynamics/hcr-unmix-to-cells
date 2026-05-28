@@ -4,6 +4,16 @@ Maps inhibitory cell types from pairwise-unmixed HCR data against the ABC Atlas 
 
 ---
 
+## Change log
+
+See [CHANGELOG.md](CHANGELOG.md) for full details.
+
+| Date | Summary |
+|---|---|
+| 2026-05-28 | Added spot-mode input selection to `run_capsule.py` via `--spots {filtered\|all_spots}` (default: `filtered`), with backward-compatible legacy CSV fallbacks and spot-specific output folders |
+
+---
+
 ## Requirements
 
 ### Data asset
@@ -12,11 +22,21 @@ mounted under `/root/capsule/data/` and follow the naming convention:
 
 ```
 HCR_{mouse_id}_pairwise-unmixing_{YYYY-MM-DD_HH-MM-SS}/
-└── inhibitory_cells_unmixed/
-    └── unmixed_inhibitory_cells.csv   ← input to the mapper
+├── inhibitory_cells_unmixed_filtered/
+│   └── unmixed_inhibitory_cells_filtered.csv
+├── all_cells_unmixed_filtered/
+│   └── unmixed_all_cells_filtered.csv
+├── inhibitory_cells_unmixed_all_spots/
+│   └── unmixed_inhibitory_cells_all_spots.csv
+└── all_cells_unmixed_all_spots/
+    └── unmixed_all_cells_all_spots.csv
 ```
 
 Example: `HCR_767018_pairwise-unmixing_2026-03-06_12-00-00`
+
+Legacy layouts are still supported as fallbacks (for example,
+`inhibitory_cells_unmixed/unmixed_inhibitory_cells.csv` and
+`all_cells_unmixed/unmixed_all_cells.csv`).
 
 ### ABC Atlas asset
 The ABC Atlas reference data must also be attached and available at `/root/capsule/data/abc_atlas/`.
@@ -31,13 +51,21 @@ Run the capsule by passing the **mouse ID** as the only required argument:
 python run_capsule.py --mouse-id 767018
 ```
 
+By default, the capsule uses the **filtered** spot subset. To run with all spots:
+
+```bash
+python run_capsule.py --mouse-id 767018 --spots all_spots
+```
+
 The script will:
 1. Locate the matching pairwise-unmixing folder in `/root/capsule/data/`
-2. Set the input CSV to `inhibitory_cells_unmixed/unmixed_inhibitory_cells.csv` inside that folder
+2. Resolve input CSVs for both inhibitory and all-cells runs based on `--spots` (`filtered` by default)
 3. Name the output after the asset folder (e.g. `HCR_767018_pairwise-unmixing_2026-03-06_12-00-00`)
 4. Run all mapping steps and generate plots
 
-Results are written to `/root/capsule/results/{output_name}/`.
+Results are written under `/root/capsule/results/` into spot-specific folders:
+- `inhibitory_cells_filtered` / `all_cells_filtered`
+- `inhibitory_cells_all_spots` / `all_cells_all_spots`
 
 ---
 
