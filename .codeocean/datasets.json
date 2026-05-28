@@ -2,10 +2,6 @@
 	"version": 1,
 	"attached_datasets": [
 		{
-			"id": "8b79d13d-5a33-4df6-9e6a-84d6fee65265",
-			"mount": "HCR_790322_pairwise-unmixing_2026-05-23_17-43-06"
-		},
-		{
 			"id": "b76f5c2c-d94b-426b-b861-699ea0a63889",
 			"mount": "abc_atlas"
 		}
