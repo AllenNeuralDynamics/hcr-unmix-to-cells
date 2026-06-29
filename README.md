@@ -7,8 +7,14 @@ one mouse at a time:
 |---|---|---|---|
 | **MapMyCells** taxonomy mapping (ABC Atlas) | `--run-mapmycells` (default) | `results/mapmycells/` | [code/mapmycells/](code/mapmycells/) |
 | **Tasic supercluster** matching (Tasic 2018 Smart-seq) | `--run-tasic-superclusters` | `results/tasic_superclusters/` | [code/tasic_superclusters/](code/tasic_superclusters/) |
+| **Reference compare** (collect per-mouse atlas-comparison CSVs) | `--run-reference-compare` | `results/reference_compare/` | [code/tasic_superclusters/collect_results.py](code/tasic_superclusters/collect_results.py) |
 
-Pass neither flag → MapMyCells only (original behavior). Pass both → run both.
+Pass no flag → MapMyCells only (original behavior). Flags combine; `--run-reference-compare`
+is an aggregation step and does **not** require `--mouse-id`.
+
+> `--run-reference-compare` consumes outputs of the reference-atlas compare flow
+> (`run_atlas_compare.py` / `atlas_compare.py`), which is **not yet in this capsule** — until
+> that upstream flow is added it will report "no comparison CSVs found".
 
 ---
 
