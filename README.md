@@ -1,6 +1,14 @@
-# HCR Pairwise-Unmixing Taxonomy Mapper
+# HCR Pairwise-Unmixing Cell Typing
 
-Maps inhibitory cell types from pairwise-unmixed HCR data against the ABC Atlas using MapMyCells.
+Assigns cell types to pairwise-unmixed HCR data using **two interchangeable strategies**,
+one mouse at a time:
+
+| Strategy | Flag | Output | Code |
+|---|---|---|---|
+| **MapMyCells** taxonomy mapping (ABC Atlas) | `--run-mapmycells` (default) | `results/mapmycells/` | [code/mapmycells/](code/mapmycells/) |
+| **Tasic supercluster** matching (Tasic 2018 Smart-seq) | `--run-tasic-superclusters` | `results/tasic_superclusters/` | [code/tasic_superclusters/](code/tasic_superclusters/) |
+
+Pass neither flag → MapMyCells only (original behavior). Pass both → run both.
 
 ---
 
@@ -10,6 +18,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full details.
 
 | Date | Summary |
 |---|---|
+| 2026-06-29 | Added the **Tasic supercluster matching** strategy (extracted from `hcr-integrated-qc-capsule`). `run_capsule.py` now selects strategies via `--run-mapmycells` / `--run-tasic-superclusters`; MapMyCells code moved to `code/mapmycells/`, new pipeline in `code/tasic_superclusters/`. |
 | 2026-05-28 | Added spot-mode input selection to `run_capsule.py` via `--spots {filtered\|all_spots}` (default: `filtered`), with backward-compatible legacy CSV fallbacks and spot-specific output folders |
 
 ---
@@ -38,34 +47,46 @@ Legacy layouts are still supported as fallbacks (for example,
 `inhibitory_cells_unmixed/unmixed_inhibitory_cells.csv` and
 `all_cells_unmixed/unmixed_all_cells.csv`).
 
-### ABC Atlas asset
+### ABC Atlas asset (MapMyCells)
 The ABC Atlas reference data must also be attached and available at `/root/capsule/data/abc_atlas/`.
+
+### Tasic Smart-seq reference (Tasic superclusters)
+> **TODO (data asset):** the Tasic supercluster strategy needs the **Tasic 2018 Smart-seq VISp
+> reference** (the `mouse_VISp_2018-06-14_*` matrices). Attach it as a data asset and point the
+> `TASIC_SMARTSEQ_DIR` env var at the mounted folder (default location:
+> `/root/capsule/data/mouse_VISp_gene_expression_matrices_2018-06-14`). See `SS_PATH` in
+> [code/tasic_superclusters/run_tasic_superclusters.py](code/tasic_superclusters/run_tasic_superclusters.py).
 
 ---
 
 ## Usage
 
-Run the capsule by passing the **mouse ID** as the only required argument:
+Run the capsule by passing the **mouse ID**:
 
 ```bash
+# MapMyCells only (default)
 python run_capsule.py --mouse-id 767018
-```
 
-By default, the capsule uses the **filtered** spot subset. To run with all spots:
-
-```bash
+# all-spots subset (MapMyCells)
 python run_capsule.py --mouse-id 767018 --spots all_spots
+
+# Tasic supercluster matching only
+python run_capsule.py --mouse-id 767018 --run-tasic-superclusters
+
+# both strategies in one run
+python run_capsule.py --mouse-id 767018 --run-mapmycells --run-tasic-superclusters
 ```
 
-The script will:
-1. Locate the matching pairwise-unmixing folder in `/root/capsule/data/`
-2. Resolve input CSVs for both inhibitory and all-cells runs based on `--spots` (`filtered` by default)
-3. Name the output after the asset folder (e.g. `HCR_767018_pairwise-unmixing_2026-03-06_12-00-00`)
-4. Run all mapping steps and generate plots
-
-Results are written under `/root/capsule/results/` into spot-specific folders:
+**MapMyCells** writes under `/root/capsule/results/mapmycells/` into spot-specific folders:
 - `inhibitory_cells_filtered` / `all_cells_filtered`
 - `inhibitory_cells_all_spots` / `all_cells_all_spots`
+
+**Tasic superclusters** writes figures/tables under
+`/root/capsule/results/tasic_superclusters/HCR_{mouse_id}/`, with heavy intermediate `.h5ad`
+files under `/root/capsule/scratch/tasic_superclusters/HCR_{mouse_id}/`. The pipeline loads its
+HCR query internally from the pairwise-unmixing asset and runs `batch_mode="none"` for a single
+mouse. For the full option set (effect threshold, min cells, optional 10x-HMB matching), run
+`code/tasic_superclusters/run_tasic_superclusters.py` directly — see its `--help`.
 
 ---
 
