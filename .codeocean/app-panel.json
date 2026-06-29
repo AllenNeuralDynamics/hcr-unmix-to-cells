@@ -8,6 +8,24 @@
 			"param_name": "mouse-id",
 			"type": "text",
 			"value_type": "string"
+		},
+		{
+			"id": "kiLEGAniBrF45aXA",
+			"name": "--run-mapmycells",
+			"param_name": "run-mapmycells",
+			"type": "list",
+			"value_type": "boolean",
+			"default_value": "True",
+			"extra_data": []
+		},
+		{
+			"id": "dRtWdkhwbbOAS3rT",
+			"name": "--run-tasic-superclusters",
+			"param_name": "run-tasic-superclusters",
+			"type": "list",
+			"value_type": "boolean",
+			"default_value": "False",
+			"extra_data": []
 		}
 	]
 }

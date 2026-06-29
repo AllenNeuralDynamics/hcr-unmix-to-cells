@@ -1,17 +1,23 @@
-# hash:sha256:cb8fc2bb2697000e2405dea2a3a938905561a7ada5e63578b862a46c5bd7334d
+# hash:sha256:40afb3926fc30c3b8094ba15aa9735b163a08b3eb01cccbe8514031e77bb02cf
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/code-server-python-extensions-pack:code-server4.108.2python3.12.4aind-metadata-mcp0.5.2withDOTFILES_REPOsupport
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG GIT_ASKPASS
-COPY git-askpass /
+COPY git-ask-pass /
 
 RUN --mount=type=secret,id=git-access-token \
     GIT_ACCESS_TOKEN="$(cat /run/secrets/git-access-token)" \
     pip install -U --no-cache-dir \
     aind-data-access-api[docdb]==1.9.3 \
+    anndata==0.12.18 \
     codeocean==0.14.0 \
+    igraph==1.0.0 \
+    leidenalg==0.12.0 \
     plotly==6.6.0 \
+    polars==1.42.0 \
+    scanpy==1.12.2 \
+    seaborn==0.13.2 \
     -e git+https://github.com/AllenInstitute/cell_type_mapper.git@79049fc679525ab79de2462ae23ed91ac2bfd554#egg=cell-type-mapper \
     -e git+https://github.com/AllenInstitute/xenium_analysis_tools@7844a9e5c3d2298316389e9392949db8fce0d34b#egg=xenium-analysis-tools \
     -e git+https://github.com/AllenNeuralDynamics/aind-hcr-data-loader.git@1cb418df118bf6833b552b4c05c3c809c375f2b7#egg=aind-hcr-data-loader \

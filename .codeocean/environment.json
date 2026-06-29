@@ -15,6 +15,10 @@
 					"version": "1.9.3"
 				},
 				{
+					"name": "anndata",
+					"version": "0.12.18"
+				},
+				{
 					"name": "codeocean",
 					"version": "0.14.0"
 				},
@@ -35,8 +39,28 @@
 					"version": "c7c3421b67fdfd555fdc7c3cddf852977b032407"
 				},
 				{
+					"name": "igraph",
+					"version": "1.0.0"
+				},
+				{
+					"name": "leidenalg",
+					"version": "0.12.0"
+				},
+				{
 					"name": "plotly",
 					"version": "6.6.0"
+				},
+				{
+					"name": "polars",
+					"version": "1.42.0"
+				},
+				{
+					"name": "scanpy",
+					"version": "1.12.2"
+				},
+				{
+					"name": "seaborn",
+					"version": "0.13.2"
 				}
 			],
 			"options": {},

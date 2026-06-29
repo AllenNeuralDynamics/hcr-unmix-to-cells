@@ -2,6 +2,10 @@
 	"version": 1,
 	"attached_datasets": [
 		{
+			"id": "9cbdc0b0-e7f1-403d-ba92-5632938e24b3",
+			"mount": "tasic2018_VISp_gene_expression_matrices"
+		},
+		{
 			"id": "b76f5c2c-d94b-426b-b861-699ea0a63889",
 			"mount": "abc_atlas"
 		}
