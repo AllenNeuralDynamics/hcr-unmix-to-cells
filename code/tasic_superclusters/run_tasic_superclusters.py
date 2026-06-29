@@ -43,19 +43,17 @@ import os
 DATA_DIR = Path("/root/capsule/data")
 
 # -----------------------------------------------------------------------------
-# Tasic 2018 Smart-seq VISp reference matrices.
+# Tasic 2018 Smart-seq VISp reference matrices (mounted data asset).
 #
-# TODO(data-asset): point this at the Tasic Smart-seq reference once it is
-# attached as a Code Ocean data asset. The folder must contain the
-# `mouse_VISp_2018-06-14_*` CSVs (genes-rows, samples-columns, exon-matrix,
-# intron-matrix) consumed by cluster_validation_utils.load_visp_expression().
-# Override at runtime without editing code via the TASIC_SMARTSEQ_DIR env var.
-# Default below is the historical scratch location used in the QC capsule.
+# The folder must contain the `mouse_VISp_2018-06-14_*` CSVs (genes-rows,
+# samples-columns, exon-matrix, intron-matrix) consumed by
+# cluster_validation_utils.load_visp_expression(). Override the location at
+# runtime without editing code via the TASIC_SMARTSEQ_DIR env var.
 # -----------------------------------------------------------------------------
 SS_PATH = Path(
     os.environ.get(
         "TASIC_SMARTSEQ_DIR",
-        "/root/capsule/data/mouse_VISp_gene_expression_matrices_2018-06-14",
+        "/root/capsule/data/tasic2018_VISp_gene_expression_matrices",
     )
 )
 

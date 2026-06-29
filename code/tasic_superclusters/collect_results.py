@@ -26,10 +26,8 @@ SCRATCH_BASE = Path("/root/capsule/scratch/ref_atlas_validation")
 COMBINED_DIR_NAME = "_combined"
 
 
-def collect(scratch_dir: Path, output_dir: Path | None = None, overwrite: bool = False) -> None:
-    # Combined CSVs go to *output_dir* when given (e.g. results/reference_compare/),
-    # otherwise default to the historical scratch_dir/_combined location.
-    combined_dir = Path(output_dir) if output_dir is not None else scratch_dir / COMBINED_DIR_NAME
+def collect(scratch_dir: Path, overwrite: bool = False) -> None:
+    combined_dir = scratch_dir / COMBINED_DIR_NAME
     combined_dir.mkdir(parents=True, exist_ok=True)
 
     out_comparison = combined_dir / "comparison_all.csv"
@@ -103,11 +101,6 @@ def _parse_args():
         help="Root directory containing per-mouse result folders.",
     )
     parser.add_argument(
-        "--output-dir", default=None,
-        help="Where to write the combined CSVs "
-             "(default: <scratch-dir>/_combined).",
-    )
-    parser.add_argument(
         "--overwrite", action="store_true",
         help="Overwrite existing combined CSVs.",
     )
@@ -116,8 +109,4 @@ def _parse_args():
 
 if __name__ == "__main__":
     args = _parse_args()
-    collect(
-        scratch_dir=Path(args.scratch_dir),
-        output_dir=Path(args.output_dir) if args.output_dir else None,
-        overwrite=args.overwrite,
-    )
+    collect(scratch_dir=Path(args.scratch_dir), overwrite=args.overwrite)

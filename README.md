@@ -7,14 +7,8 @@ one mouse at a time:
 |---|---|---|---|
 | **MapMyCells** taxonomy mapping (ABC Atlas) | `--run-mapmycells` (default) | `results/mapmycells/` | [code/mapmycells/](code/mapmycells/) |
 | **Tasic supercluster** matching (Tasic 2018 Smart-seq) | `--run-tasic-superclusters` | `results/tasic_superclusters/` | [code/tasic_superclusters/](code/tasic_superclusters/) |
-| **Reference compare** (collect per-mouse atlas-comparison CSVs) | `--run-reference-compare` | `results/reference_compare/` | [code/tasic_superclusters/collect_results.py](code/tasic_superclusters/collect_results.py) |
 
-Pass no flag → MapMyCells only (original behavior). Flags combine; `--run-reference-compare`
-is an aggregation step and does **not** require `--mouse-id`.
-
-> `--run-reference-compare` consumes outputs of the reference-atlas compare flow
-> (`run_atlas_compare.py` / `atlas_compare.py`), which is **not yet in this capsule** — until
-> that upstream flow is added it will report "no comparison CSVs found".
+Pass neither flag → MapMyCells only (original behavior). Pass both → run both.
 
 ---
 
@@ -57,11 +51,11 @@ Legacy layouts are still supported as fallbacks (for example,
 The ABC Atlas reference data must also be attached and available at `/root/capsule/data/abc_atlas/`.
 
 ### Tasic Smart-seq reference (Tasic superclusters)
-> **TODO (data asset):** the Tasic supercluster strategy needs the **Tasic 2018 Smart-seq VISp
-> reference** (the `mouse_VISp_2018-06-14_*` matrices). Attach it as a data asset and point the
-> `TASIC_SMARTSEQ_DIR` env var at the mounted folder (default location:
-> `/root/capsule/data/mouse_VISp_gene_expression_matrices_2018-06-14`). See `SS_PATH` in
-> [code/tasic_superclusters/run_tasic_superclusters.py](code/tasic_superclusters/run_tasic_superclusters.py).
+The Tasic supercluster strategy needs the **Tasic 2018 Smart-seq VISp reference** (the
+`mouse_VISp_2018-06-14_*` matrices), mounted at
+`/root/capsule/data/tasic2018_VISp_gene_expression_matrices`. Override the location with the
+`TASIC_SMARTSEQ_DIR` env var. See `SS_PATH` in
+[code/tasic_superclusters/run_tasic_superclusters.py](code/tasic_superclusters/run_tasic_superclusters.py).
 
 ---
 
@@ -69,18 +63,21 @@ The ABC Atlas reference data must also be attached and available at `/root/capsu
 
 Run the capsule by passing the **mouse ID**:
 
+The strategy flags take explicit boolean values (`true`/`false`) so they map cleanly to Code
+Ocean app parameters; a bare flag (e.g. `--run-tasic-superclusters`) still means `true`.
+
 ```bash
-# MapMyCells only (default)
+# MapMyCells only (default when no flag is true)
 python run_capsule.py --mouse-id 767018
 
 # all-spots subset (MapMyCells)
 python run_capsule.py --mouse-id 767018 --spots all_spots
 
 # Tasic supercluster matching only
-python run_capsule.py --mouse-id 767018 --run-tasic-superclusters
+python run_capsule.py --mouse-id 767018 --run-tasic-superclusters true
 
 # both strategies in one run
-python run_capsule.py --mouse-id 767018 --run-mapmycells --run-tasic-superclusters
+python run_capsule.py --mouse-id 767018 --run-mapmycells true --run-tasic-superclusters true
 ```
 
 **MapMyCells** writes under `/root/capsule/results/mapmycells/` into spot-specific folders:

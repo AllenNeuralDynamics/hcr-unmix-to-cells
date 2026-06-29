@@ -47,10 +47,27 @@ PIPELINE_DATA_ROOT = Path("/data/pipeline_data")
 RESULTS_ROOT       = Path("/root/capsule/results")
 SCRATCH_ROOT       = Path("/root/capsule/scratch")
 PARAMS_PATH        = "/root/capsule/code/params.json"
-# Per-mouse atlas-comparison outputs (from the reference-atlas compare flow) are
-# collected from here by --run-reference-compare.
-REFERENCE_SCRATCH_ROOT = Path("/root/capsule/scratch/ref_atlas_validation")
 SPOT_CHOICES = ("filtered", "all_spots")
+
+_TRUE_STRINGS = {"1", "true", "t", "yes", "y", "on"}
+_FALSE_STRINGS = {"0", "false", "f", "no", "n", "off"}
+
+
+def str2bool(value):
+    """Parse a boolean from a string (for Code Ocean app boolean parameters).
+
+    Accepts true/false/yes/no/1/0/on/off (case-insensitive). Lets the run flags
+    be passed as ``--run-tasic-superclusters true`` rather than as bare presence
+    flags, which the Code Ocean parameter UI cannot toggle cleanly.
+    """
+    if isinstance(value, bool):
+        return value
+    v = str(value).strip().lower()
+    if v in _TRUE_STRINGS:
+        return True
+    if v in _FALSE_STRINGS:
+        return False
+    raise argparse.ArgumentTypeError(f"expected a boolean value, got {value!r}")
 
 INHIBITORY_CSV_CANDIDATES_BY_SPOTS = {
     "filtered": [
@@ -251,33 +268,6 @@ def run_tasic_superclusters(mouse_id: str, output_root: Path, scratch_root: Path
     )
 
 
-def run_reference_compare(
-    output_root: Path,
-    reference_scratch_root: Path = REFERENCE_SCRATCH_ROOT,
-) -> None:
-    """Collect per-mouse atlas-comparison CSVs into combined files.
-
-    Aggregation step (not per-mouse): walks the reference-atlas validation scratch
-    dir and concatenates each mouse's comparison.csv / cluster_matches.csv into
-    ``{output_root}/reference_compare/``.
-
-    NOTE: this consumes outputs of the reference-atlas compare flow
-    (run_atlas_compare.py / atlas_compare.py), which is not yet in this capsule.
-    Until that upstream flow is added, this will report "no comparison CSVs found".
-    """
-    from collect_results import collect  # lazy
-
-    out_dir = output_root / "reference_compare"
-
-    print(f"\n{'='*60}")
-    print(f"Reference compare (collect)")
-    print(f"Input scratch : {reference_scratch_root}")
-    print(f"Output dir    : {out_dir}")
-    print(f"{'='*60}\n")
-
-    collect(scratch_dir=reference_scratch_root, output_dir=out_dir, overwrite=True)
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run capsule – cell-typing strategy orchestrator",
@@ -307,23 +297,21 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--run-mapmycells",
-        action="store_true",
+        type=str2bool,
+        nargs="?",
+        const=True,
         default=False,
-        help="Run taxonomy mapping (MapMyCells) → results/mapmycells/. "
-             "Default strategy when no --run-* flag is given.",
+        help="Run taxonomy mapping (MapMyCells) → results/mapmycells/ "
+             "(true/false). Default strategy when no --run-* flag is true.",
     )
     parser.add_argument(
         "--run-tasic-superclusters",
-        action="store_true",
+        type=str2bool,
+        nargs="?",
+        const=True,
         default=False,
-        help="Run Tasic supercluster matching → results/tasic_superclusters/.",
-    )
-    parser.add_argument(
-        "--run-reference-compare",
-        action="store_true",
-        default=False,
-        help="Collect per-mouse atlas-comparison CSVs → results/reference_compare/. "
-             "Aggregation step; does not require --mouse-id.",
+        help="Run Tasic supercluster matching → results/tasic_superclusters/ "
+             "(true/false).",
     )
     # Consume only known args; pass everything else straight to the mapper
     args, remaining = parser.parse_known_args()
@@ -331,34 +319,27 @@ if __name__ == "__main__":
     # --- select strategies (default: MapMyCells only) ------------------------
     run_mmc = args.run_mapmycells
     run_tasic = args.run_tasic_superclusters
-    run_refcmp = args.run_reference_compare
-    if not (run_mmc or run_tasic or run_refcmp):
+    if not run_mmc and not run_tasic:
         run_mmc = True
         print("No strategy flag given; defaulting to --run-mapmycells.")
 
-    output_root = Path(args.output_dir)
+    # --- resolve mouse_id (pipeline mode takes priority) ---------------------
+    if PIPELINE_DATA_ROOT.exists():
+        print(f"Pipeline mode detected: reading mouse_id from {PIPELINE_DATA_ROOT}")
+        mouse_id = resolve_mouse_id_from_pipeline(PIPELINE_DATA_ROOT)
+    elif args.mouse_id:
+        mouse_id = args.mouse_id
+        print(f"Standalone mode: using mouse_id={mouse_id!r} from --mouse-id argument")
+    else:
+        parser.error(
+            "--mouse-id is required when not running in pipeline mode "
+            "(i.e. when /data/pipeline_data does not exist)"
+        )
 
-    # --- resolve mouse_id (only the per-mouse strategies need it) -------------
-    needs_mouse_id = run_mmc or run_tasic
-    mouse_id = None
-    if needs_mouse_id:
-        if PIPELINE_DATA_ROOT.exists():
-            print(f"Pipeline mode detected: reading mouse_id from {PIPELINE_DATA_ROOT}")
-            mouse_id = resolve_mouse_id_from_pipeline(PIPELINE_DATA_ROOT)
-        elif args.mouse_id:
-            mouse_id = args.mouse_id
-            print(f"Standalone mode: using mouse_id={mouse_id!r} from --mouse-id argument")
-        else:
-            parser.error(
-                "--mouse-id is required when not running in pipeline mode "
-                "(i.e. when /data/pipeline_data does not exist)"
-            )
+    output_root = Path(args.output_dir)
 
     if run_mmc:
         run_mapmycells(mouse_id, args.spots, output_root, remaining)
 
     if run_tasic:
         run_tasic_superclusters(mouse_id, output_root, SCRATCH_ROOT)
-
-    if run_refcmp:
-        run_reference_compare(output_root)
