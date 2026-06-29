@@ -1,4 +1,4 @@
-# hash:sha256:40afb3926fc30c3b8094ba15aa9735b163a08b3eb01cccbe8514031e77bb02cf
+# hash:sha256:416b3f39b43e87cebab14ba0a1820e088563533dee757e88d2f90010d7dd96b6
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/code-server-python-extensions-pack:code-server4.108.2python3.12.4aind-metadata-mcp0.5.2withDOTFILES_REPOsupport
 
@@ -20,7 +20,7 @@ RUN --mount=type=secret,id=git-access-token \
     seaborn==0.13.2 \
     -e git+https://github.com/AllenInstitute/cell_type_mapper.git@79049fc679525ab79de2462ae23ed91ac2bfd554#egg=cell-type-mapper \
     -e git+https://github.com/AllenInstitute/xenium_analysis_tools@7844a9e5c3d2298316389e9392949db8fce0d34b#egg=xenium-analysis-tools \
-    -e git+https://github.com/AllenNeuralDynamics/aind-hcr-data-loader.git@1cb418df118bf6833b552b4c05c3c809c375f2b7#egg=aind-hcr-data-loader \
+    -e git+https://github.com/AllenNeuralDynamics/aind-hcr-data-loader.git@0f93c97bba31c5d6ffdacd656f3cc159a9ceae9f#egg=aind-hcr-data-loader \
     -e git+https://github.com/AllenNeuralDynamics/aind-hcr-qc.git@c7c3421b67fdfd555fdc7c3cddf852977b032407#egg=aind-hcr-qc
 
 COPY postInstall /

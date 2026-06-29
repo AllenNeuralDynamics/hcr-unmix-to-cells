@@ -32,7 +32,7 @@
 				},
 				{
 					"name": "git+https://github.com/AllenNeuralDynamics/aind-hcr-data-loader.git#egg=aind-hcr-data-loader",
-					"version": "1cb418df118bf6833b552b4c05c3c809c375f2b7"
+					"version": "0f93c97bba31c5d6ffdacd656f3cc159a9ceae9f"
 				},
 				{
 					"name": "git+https://github.com/AllenNeuralDynamics/aind-hcr-qc.git#egg=aind-hcr-qc",
