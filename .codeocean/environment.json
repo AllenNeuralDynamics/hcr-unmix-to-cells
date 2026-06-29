@@ -39,6 +39,9 @@
 					"version": "c7c3421b67fdfd555fdc7c3cddf852977b032407"
 				},
 				{
+					"name": "git+https://github.com/AllenNeuralDynamics/ophys-mfish-dataset-catalog.git#egg=ophys-mfish-dataset-catalog"
+				},
+				{
 					"name": "igraph",
 					"version": "1.0.0"
 				},
