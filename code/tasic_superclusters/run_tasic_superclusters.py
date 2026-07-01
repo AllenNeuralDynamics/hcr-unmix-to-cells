@@ -4584,6 +4584,33 @@ def main(
     scratch.mkdir(parents=True, exist_ok=True)
     setup_logging(OUT_ROOT)
 
+    # Persist the full parameter set for provenance (mirrors the MapMyCells
+    # run_params.json). Written early so the record exists even if a later
+    # stage fails.
+    import datetime as _dt
+    import json as _json
+
+    run_params_snapshot = {
+        "run_timestamp": _dt.datetime.now().isoformat(),
+        "mouse_ids": MOUSE_IDS,
+        "batch_mode": batch_mode,
+        "effect_threshold": effect_threshold,
+        "drop_minor_subclasses": drop_minor_subclasses,
+        "min_cells_per_cluster": min_cells_per_cluster,
+        "min_cells_per_branch_cluster": min_cells_per_branch_cluster,
+        "run_10x_hmb": run_10x_hmb,
+        "tenx_dir": str(tenx_dir),
+        "tenx_expression_scale": tenx_expression_scale,
+        "tenx_label_column": tenx_label_column,
+        "recompute_stage4": recompute_stage4,
+        "output_dir": str(OUT_ROOT),
+        "scratch_dir": str(scratch),
+    }
+    run_params_path = OUT_ROOT / "run_params.json"
+    with open(run_params_path, "w") as _f:
+        _json.dump(run_params_snapshot, _f, indent=2, default=str)
+    print(f"  Run params saved to: {run_params_path}")
+
     print(f"  Batch correction mode: {batch_mode}")
     print(f"  Effect size threshold: {effect_threshold}")
     print(f"  Drop minor subclasses: {drop_minor_subclasses}")

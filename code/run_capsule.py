@@ -241,8 +241,10 @@ def run_tasic_superclusters(mouse_id: str, output_root: Path, scratch_root: Path
 
     HCR query data is loaded internally by the pipeline via
     aind_hcr_data_loader.get_hcr_dataset_pairwise(mouse_id, data_dir=DATA_ROOT).
-    Outputs land under ``{output_root}/tasic_superclusters/HCR_{mouse_id}``;
-    heavy intermediate .h5ad files go under ``{scratch_root}/tasic_superclusters``.
+    Outputs land directly under ``{output_root}/tasic_superclusters``; heavy
+    intermediate .h5ad files go under ``{scratch_root}/tasic_superclusters``.
+    (No per-mouse subfolder — the capsule runs one mouse at a time and the mouse
+    id is already carried on the captured results data asset name.)
 
     NOTE(data-asset): requires the Tasic 2018 Smart-seq reference to be mounted
     and pointed at via the TASIC_SMARTSEQ_DIR env var (see SS_PATH in
@@ -250,8 +252,8 @@ def run_tasic_superclusters(mouse_id: str, output_root: Path, scratch_root: Path
     """
     from run_tasic_superclusters import main as _tasic_main  # lazy: heavy deps
 
-    out_dir = output_root / "tasic_superclusters" / f"HCR_{mouse_id}"
-    scratch_dir = scratch_root / "tasic_superclusters" / f"HCR_{mouse_id}"
+    out_dir = output_root / "tasic_superclusters"
+    scratch_dir = scratch_root / "tasic_superclusters"
 
     print(f"\n{'='*60}")
     print(f"Tasic superclusters : mouse {mouse_id}")
