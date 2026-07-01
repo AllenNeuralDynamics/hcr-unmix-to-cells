@@ -4262,8 +4262,9 @@ def _plot_hcr_cellxgene_per_mouse(
     Uses raw counts (clipped 0-200), not z-scored values.
     Saves results into per-mouse subfolders.
     """
-    # Load raw counts from hcr_log (saved during Stage 1 normalization)
-    hcr_log_path = out_dir.parent / "hcr_log.h5ad"
+    # Load raw counts from hcr_log (saved to scratch during Stage 1
+    # normalization — see main(); NOT under out_dir/results).
+    hcr_log_path = SCRATCH_ROOT / "hcr_log.h5ad"
     print(f"    Loading raw counts from {hcr_log_path}...")
     hcr_log = ad.read_h5ad(hcr_log_path)
     
@@ -4573,12 +4574,14 @@ def main(
     # called with None we fall back to the module-level defaults. We reassign the
     # module globals so the existing body (which references OUT_ROOT/MOUSE_IDS)
     # stays unchanged.
-    global OUT_ROOT, MOUSE_IDS
+    global OUT_ROOT, MOUSE_IDS, SCRATCH_ROOT
     if mouse_ids is not None:
         MOUSE_IDS = list(mouse_ids)
     if output_dir is not None:
         OUT_ROOT = Path(output_dir)
-    scratch = SCRATCH_ROOT if scratch_dir is None else Path(scratch_dir)
+    if scratch_dir is not None:
+        SCRATCH_ROOT = Path(scratch_dir)
+    scratch = SCRATCH_ROOT
 
     OUT_ROOT.mkdir(parents=True, exist_ok=True)
     scratch.mkdir(parents=True, exist_ok=True)
