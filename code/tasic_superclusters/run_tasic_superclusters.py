@@ -270,6 +270,123 @@ def zscore_genes(adata: ad.AnnData) -> ad.AnnData:
     return adata
 
 
+# ---------------------------------------------------------------------------
+# Normalization methods (Stage 1 pre-z-score transform)
+#
+# The per-cell normalization is the only variable across methods; gene-wise
+# z-scoring (zscore_genes) is still applied afterward in run_stage1, so the
+# downstream comparison currency and batch-correction step are held fixed for a
+# clean A/B comparison. Raw counts are always kept in layers["raw"].
+#
+#   "log_zscore" (default): the original per-platform log-normalization
+#       (TASIC: CP10k + log1p; HCR: log1p only; 10x: log2 as-is / log1p).
+#   "pflogpf": PFlog1pPF from Booeshaghi & Pachter (bioRxiv 2022.05.06.490859) —
+#       proportional-fit each cell to the mean cell depth, log1p, then subtract
+#       the per-cell mean (the CLR "shift"). Reference implementation:
+#           def pf(mtx):
+#               d = mtx.sum(1); return diags(d.mean() / d) @ mtx
+#           x = pf(raw); x.data = log1p(x.data)
+#           pflog1ppf = x - x.mean(axis=1)          # per-cell centering
+#   "clr_shift": the cheap retroactive variant — the platform's existing base
+#       log-normalization, then per-cell centering (depth target unchanged).
+# ---------------------------------------------------------------------------
+NORMALIZATION_METHODS = ("log_zscore", "clr_shift", "pflogpf")
+
+
+def _to_dense_f64(X) -> np.ndarray:
+    """Return X as a dense float64 array (accepts dense or sparse input)."""
+    return np.asarray(X.toarray() if hasattr(X, "toarray") else X, dtype=np.float64)
+
+
+def _proportional_fit(X: np.ndarray) -> np.ndarray:
+    """Scale each cell (row) so its total equals the mean cell total.
+
+    This is the ``pf`` step of PFlog1pPF. Cells with zero total are left as-is
+    (scale 0) rather than dividing by zero.
+    """
+    depth = X.sum(axis=1)
+    nonzero = depth > 0
+    target = depth[nonzero].mean() if nonzero.any() else 1.0
+    scale = np.divide(target, depth, out=np.zeros_like(depth, dtype=np.float64), where=nonzero)
+    return X * scale[:, None]
+
+
+def _clr_center(X: np.ndarray) -> np.ndarray:
+    """Subtract each cell's mean across genes (the CLR / PFlog1pPF shift)."""
+    return X - X.mean(axis=1, keepdims=True)
+
+
+def normalize_platform(
+    adata: ad.AnnData,
+    *,
+    platform: str,
+    method: str = "log_zscore",
+    hcr_apply_pf: bool = True,
+    tenx_expression_scale: str = "log2",
+) -> ad.AnnData:
+    """Normalize one platform's counts per ``method`` (pre-z-score).
+
+    Parameters
+    ----------
+    platform : {"tasic", "hcr", "10x"}
+    method   : one of NORMALIZATION_METHODS.
+    hcr_apply_pf : for ``pflogpf`` only — whether the HCR platform receives the
+        depth-normalizing PF step. HCR is a targeted panel that gets no
+        library-size normalization in the default pipeline, so this defaults to
+        True for a faithful pflogpf but can be set False to keep HCR depth-free
+        while still applying the CLR shift.
+    tenx_expression_scale : {"log2", "raw"} — 10x-HMB input scale.
+
+    Returns an AnnData whose ``.X`` is the normalized (pre-z-score) matrix, with
+    raw counts preserved in ``layers["raw"]``.
+    """
+    if method not in NORMALIZATION_METHODS:
+        raise ValueError(
+            f"Unknown normalization method {method!r}; choose from {NORMALIZATION_METHODS}."
+        )
+
+    # log_zscore → the original per-platform base log-normalization.
+    if method == "log_zscore":
+        if platform == "tasic":
+            return normalize_tasic(adata)
+        if platform == "hcr":
+            return normalize_hcr(adata)
+        if platform == "10x":
+            return normalize_10x_hmb(adata, expression_scale=tenx_expression_scale)
+        raise ValueError(f"Unknown platform {platform!r}.")
+
+    # clr_shift → the base log-norm, then center each cell.
+    if method == "clr_shift":
+        base = normalize_platform(
+            adata, platform=platform, method="log_zscore",
+            tenx_expression_scale=tenx_expression_scale,
+        )
+        base.X = _clr_center(_to_dense_f64(base.X)).astype(np.float32)
+        return base
+
+    # pflogpf → PF (depth → mean) → log1p → center each cell.
+    adata = adata.copy()
+    adata.layers["raw"] = adata.X.copy()
+    X = _to_dense_f64(adata.X)
+
+    tenx_is_log = platform == "10x" and tenx_expression_scale == "log2"
+    apply_pf = True
+    if platform == "hcr":
+        apply_pf = hcr_apply_pf
+    if tenx_is_log:
+        # 10x log2 input has no linear counts to proportionally fit; center only.
+        apply_pf = False
+
+    if apply_pf:
+        X = _proportional_fit(X)
+    if not tenx_is_log:
+        X = np.log1p(X)  # 10x log2 is already log-scaled
+    X = _clr_center(X)
+
+    adata.X = X.astype(np.float32)
+    return adata
+
+
 def intersect_genes(
     tasic: ad.AnnData,
     hcr: ad.AnnData,
@@ -325,6 +442,8 @@ def run_stage1(
     tasic_layer: str = "exon",
     drop_minor_subclasses: bool = False,
     min_cells_per_cluster: int = 0,
+    normalization: str = "log_zscore",
+    hcr_apply_pf: bool = True,
 ) -> tuple[ad.AnnData, ad.AnnData, ad.AnnData, ad.AnnData]:
     """
     Execute full Stage 1 pipeline.
@@ -335,6 +454,12 @@ def run_stage1(
         If True, remove Serpinf1/CR/Meis2 cells from Tasic reference.
     min_cells_per_cluster : int
         Drop Tasic clusters with fewer than this many cells (0 = keep all).
+    normalization : str
+        Per-cell normalization method (see NORMALIZATION_METHODS). Gene-wise
+        z-scoring is applied afterward regardless.
+    hcr_apply_pf : bool
+        For ``pflogpf`` only — whether HCR receives the depth-normalizing PF
+        step (see normalize_platform).
 
     Returns
     -------
@@ -370,12 +495,16 @@ def run_stage1(
     tasic_raw, hcr_raw = intersect_genes(tasic_raw, hcr_raw, exclude=EXCLUDE_GENES)
 
     # 1.3 Normalize Tasic
-    print("\n[1.3] Normalizing Tasic (log_cp10k)...")
-    tasic_log = normalize_tasic(tasic_raw)
+    print(f"\n[1.3] Normalizing Tasic (method={normalization})...")
+    tasic_log = normalize_platform(
+        tasic_raw, platform="tasic", method=normalization, hcr_apply_pf=hcr_apply_pf
+    )
 
     # 1.4 Normalize HCR
-    print("\n[1.4] Normalizing HCR (log1p)...")
-    hcr_log = normalize_hcr(hcr_raw)
+    print(f"\n[1.4] Normalizing HCR (method={normalization})...")
+    hcr_log = normalize_platform(
+        hcr_raw, platform="hcr", method=normalization, hcr_apply_pf=hcr_apply_pf
+    )
 
     # 1.5 Gene-wise z-score
     print("\n[1.5] Gene-wise z-scoring (per platform)...")
@@ -4568,6 +4697,8 @@ def main(
     mouse_ids: list[str] | None = None,
     output_dir: Path | str | None = None,
     scratch_dir: Path | str | None = None,
+    normalization: str = "log_zscore",
+    hcr_apply_pf: bool = True,
 ) -> None:
     # Resolve per-run output location and query mice. The capsule orchestrator
     # passes a single mouse id + a results/tasic_superclusters/<name> dir; when
@@ -4608,12 +4739,15 @@ def main(
         "recompute_stage4": recompute_stage4,
         "output_dir": str(OUT_ROOT),
         "scratch_dir": str(scratch),
+        "normalization": normalization,
+        "hcr_apply_pf": hcr_apply_pf,
     }
     run_params_path = OUT_ROOT / "run_params.json"
     with open(run_params_path, "w") as _f:
         _json.dump(run_params_snapshot, _f, indent=2, default=str)
     print(f"  Run params saved to: {run_params_path}")
 
+    print(f"  Normalization: {normalization} (hcr_apply_pf={hcr_apply_pf})")
     print(f"  Batch correction mode: {batch_mode}")
     print(f"  Effect size threshold: {effect_threshold}")
     print(f"  Drop minor subclasses: {drop_minor_subclasses}")
@@ -4649,6 +4783,8 @@ def main(
             mouse_ids=MOUSE_IDS,
             drop_minor_subclasses=drop_minor_subclasses,
             min_cells_per_cluster=min_cells_per_cluster,
+            normalization=normalization,
+            hcr_apply_pf=hcr_apply_pf,
         )
 
         # Stage 1 summary plots
@@ -4714,10 +4850,15 @@ def main(
         print("\n[1x.2] Intersecting Tasic with 10x genes...")
         tasic_raw, tenx_raw_cached = intersect_genes(tasic_raw, tenx_raw_cached, exclude=EXCLUDE_GENES)
 
-        print("\n[1x.3] Normalizing and z-scoring Tasic + 10x...")
-        tasic_log = normalize_tasic(tasic_raw)
+        print(f"\n[1x.3] Normalizing (method={normalization}) and z-scoring Tasic + 10x...")
+        tasic_log = normalize_platform(
+            tasic_raw, platform="tasic", method=normalization, hcr_apply_pf=hcr_apply_pf
+        )
         tasic_z = zscore_genes(tasic_log)
-        tenx_log = normalize_10x_hmb(tenx_raw_cached, expression_scale=tenx_expression_scale)
+        tenx_log = normalize_platform(
+            tenx_raw_cached, platform="10x", method=normalization,
+            tenx_expression_scale=tenx_expression_scale,
+        )
         tenx_z_cached = zscore_genes(tenx_log)
 
         tasic_z.write(OUT_ROOT / "tasic_z.h5ad")
@@ -4775,8 +4916,11 @@ def main(
             tasic_tmp, tenx_raw = intersect_genes(tasic_z, tenx_raw, exclude=EXCLUDE_GENES)
             del tasic_tmp
 
-            print("\n[10x.3] Normalizing + z-scoring 10x-HMB...")
-            tenx_log = normalize_10x_hmb(tenx_raw, expression_scale=tenx_expression_scale)
+            print(f"\n[10x.3] Normalizing (method={normalization}) + z-scoring 10x-HMB...")
+            tenx_log = normalize_platform(
+                tenx_raw, platform="10x", method=normalization,
+                tenx_expression_scale=tenx_expression_scale,
+            )
             tenx_z = zscore_genes(tenx_log)
             tenx_z.write(OUT_ROOT / "10x_hmb_z.h5ad")
         else:
@@ -4881,6 +5025,19 @@ if __name__ == "__main__":
         help="Scratch dir for heavy intermediate .h5ad files "
              "(default: /root/capsule/scratch/tasic_superclusters).",
     )
+    parser.add_argument(
+        "--normalization", type=str, default="log_zscore",
+        choices=list(NORMALIZATION_METHODS),
+        help="Per-cell normalization before gene-wise z-scoring: "
+             "'log_zscore' (default, original), 'clr_shift' (base log-norm + "
+             "per-cell centering), or 'pflogpf' (PF -> log1p -> centering).",
+    )
+    parser.add_argument(
+        "--no-hcr-apply-pf", dest="hcr_apply_pf", action="store_false", default=True,
+        help="For --normalization pflogpf: skip the depth-normalizing PF step "
+             "for HCR (keeps HCR depth-free, still applies the CLR shift). "
+             "TASIC/10x are unaffected.",
+    )
     args = parser.parse_args()
     main(
         batch_mode=args.batch_mode,
@@ -4896,4 +5053,6 @@ if __name__ == "__main__":
         mouse_ids=args.mouse_id,
         output_dir=args.output_dir,
         scratch_dir=args.scratch_dir,
+        normalization=args.normalization,
+        hcr_apply_pf=args.hcr_apply_pf,
     )

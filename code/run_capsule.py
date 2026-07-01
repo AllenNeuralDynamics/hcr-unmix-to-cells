@@ -236,7 +236,13 @@ def run_mapmycells(mouse_id: str, spots: str, output_root: Path, remaining: list
         _mapper_main()
 
 
-def run_tasic_superclusters(mouse_id: str, output_root: Path, scratch_root: Path) -> None:
+def run_tasic_superclusters(
+    mouse_id: str,
+    output_root: Path,
+    scratch_root: Path,
+    normalization: str = "log_zscore",
+    hcr_apply_pf: bool = True,
+) -> None:
     """Run the Tasic supercluster matching strategy for one mouse.
 
     HCR query data is loaded internally by the pipeline via
@@ -245,6 +251,10 @@ def run_tasic_superclusters(mouse_id: str, output_root: Path, scratch_root: Path
     intermediate .h5ad files go under ``{scratch_root}/tasic_superclusters``.
     (No per-mouse subfolder — the capsule runs one mouse at a time and the mouse
     id is already carried on the captured results data asset name.)
+
+    normalization : per-cell normalization method passed to the pipeline
+        ("log_zscore" default, "clr_shift", or "pflogpf"). hcr_apply_pf toggles
+        the HCR depth-normalizing PF step for pflogpf.
 
     NOTE(data-asset): requires the Tasic 2018 Smart-seq reference to be mounted
     and pointed at via the TASIC_SMARTSEQ_DIR env var (see SS_PATH in
@@ -259,6 +269,7 @@ def run_tasic_superclusters(mouse_id: str, output_root: Path, scratch_root: Path
     print(f"Tasic superclusters : mouse {mouse_id}")
     print(f"Output dir          : {out_dir}")
     print(f"Scratch dir         : {scratch_dir}")
+    print(f"Normalization       : {normalization} (hcr_apply_pf={hcr_apply_pf})")
     print(f"{'='*60}\n")
 
     # One mouse at a time → cross-mouse batch correction is a no-op; use "none".
@@ -267,6 +278,8 @@ def run_tasic_superclusters(mouse_id: str, output_root: Path, scratch_root: Path
         output_dir=out_dir,
         scratch_dir=scratch_dir,
         batch_mode="none",
+        normalization=normalization,
+        hcr_apply_pf=hcr_apply_pf,
     )
 
 
@@ -315,6 +328,24 @@ if __name__ == "__main__":
         help="Run Tasic supercluster matching → results/tasic_superclusters/ "
              "(true/false).",
     )
+    parser.add_argument(
+        "--normalization",
+        type=str,
+        default="log_zscore",
+        choices=["log_zscore", "clr_shift", "pflogpf"],
+        help="(Tasic) per-cell normalization before gene z-scoring: 'log_zscore' "
+             "(default, original), 'clr_shift' (base log-norm + per-cell centering), "
+             "or 'pflogpf' (PF -> log1p -> centering).",
+    )
+    parser.add_argument(
+        "--hcr-apply-pf",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=True,
+        help="(Tasic, pflogpf only) apply the depth-normalizing PF step to HCR "
+             "(true/false). False keeps HCR depth-free but still centers cells.",
+    )
     # Consume only known args; pass everything else straight to the mapper
     args, remaining = parser.parse_known_args()
 
@@ -344,4 +375,8 @@ if __name__ == "__main__":
         run_mapmycells(mouse_id, args.spots, output_root, remaining)
 
     if run_tasic:
-        run_tasic_superclusters(mouse_id, output_root, SCRATCH_ROOT)
+        run_tasic_superclusters(
+            mouse_id, output_root, SCRATCH_ROOT,
+            normalization=args.normalization,
+            hcr_apply_pf=args.hcr_apply_pf,
+        )
