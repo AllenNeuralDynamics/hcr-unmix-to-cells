@@ -1,4 +1,4 @@
-# hash:sha256:167e51f2eb5d5f415ba475e056b3f86e79c648a82360554427fa177cb4a50275
+# hash:sha256:06a488d4776f77bb0f7d4b21c9126f254d2b8af0b67cffc97cb3cfdbd0c7644b
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/code-server-python-extensions-pack:code-server4.108.2python3.12.4aind-metadata-mcp0.5.2withDOTFILES_REPOsupport
 
@@ -20,8 +20,8 @@ RUN --mount=type=secret,id=git-access-token \
     seaborn==0.13.2 \
     -e git+https://github.com/AllenInstitute/cell_type_mapper.git@79049fc679525ab79de2462ae23ed91ac2bfd554#egg=cell-type-mapper \
     -e git+https://github.com/AllenInstitute/xenium_analysis_tools@7844a9e5c3d2298316389e9392949db8fce0d34b#egg=xenium-analysis-tools \
-    -e git+https://github.com/AllenNeuralDynamics/aind-hcr-data-loader.git@cc6af69cb95c9b61c905ec29e8242c9bca21c3e1#egg=aind-hcr-data-loader \
-    -e git+https://github.com/AllenNeuralDynamics/aind-hcr-qc.git@c7c3421b67fdfd555fdc7c3cddf852977b032407#egg=aind-hcr-qc \
+    -e git+https://github.com/AllenNeuralDynamics/aind-hcr-data-loader.git@0f93c97bba31c5d6ffdacd656f3cc159a9ceae9f#egg=aind-hcr-data-loader \
+    -e git+https://github.com/AllenNeuralDynamics/aind-hcr-qc.git@e03778d64390b3e70c7cea81ac923944520a55eb#egg=aind-hcr-qc \
     -e git+https://github.com/AllenNeuralDynamics/ophys-mfish-dataset-catalog.git@d54316aa156fa8302e87615573a9d5cc89e58fa1#egg=ophys-mfish-dataset-catalog
 
 COPY postInstall /

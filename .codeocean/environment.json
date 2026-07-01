@@ -32,11 +32,11 @@
 				},
 				{
 					"name": "git+https://github.com/AllenNeuralDynamics/aind-hcr-data-loader.git#egg=aind-hcr-data-loader",
-					"version": "cc6af69cb95c9b61c905ec29e8242c9bca21c3e1"
+					"version": "0f93c97bba31c5d6ffdacd656f3cc159a9ceae9f"
 				},
 				{
 					"name": "git+https://github.com/AllenNeuralDynamics/aind-hcr-qc.git#egg=aind-hcr-qc",
-					"version": "c7c3421b67fdfd555fdc7c3cddf852977b032407"
+					"version": "e03778d64390b3e70c7cea81ac923944520a55eb"
 				},
 				{
 					"name": "git+https://github.com/AllenNeuralDynamics/ophys-mfish-dataset-catalog.git#egg=ophys-mfish-dataset-catalog",
