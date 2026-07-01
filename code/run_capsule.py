@@ -342,7 +342,7 @@ if __name__ == "__main__":
         type=str2bool,
         nargs="?",
         const=True,
-        default=True,
+        default=False,
         help="(Tasic, pflogpf only) apply the depth-normalizing PF step to HCR "
              "(true/false). False keeps HCR depth-free but still centers cells.",
     )

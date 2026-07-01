@@ -26,6 +26,13 @@
 			"value_type": "boolean",
 			"default_value": "False",
 			"extra_data": []
+		},
+		{
+			"id": "kZktm5Xui0EYm1Xe",
+			"name": "--normalization",
+			"param_name": "normalization",
+			"type": "text",
+			"value_type": "string"
 		}
 	]
 }
