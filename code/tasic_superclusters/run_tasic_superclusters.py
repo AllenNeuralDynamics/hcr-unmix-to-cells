@@ -99,12 +99,17 @@ def load_hcr_multi_mouse(
     adatas = []
     for mouse_id in mouse_ids:
         print(f"  Loading HCR mouse {mouse_id}...")
+        # pairwise_only=True: this pipeline reads only the pairwise-unmixing
+        # asset (via load_inhibitory_cells), so skip building the full
+        # multi-round HCRDataset. That lets the capsule run with only the
+        # pairwise asset mounted instead of all of the processed round assets.
         _, pw_ds, _ = get_hcr_dataset_pairwise(
             mouse_id=mouse_id,
             data_dir=data_dir,
             load_spots=False,
             return_removed=False,
             coreg_cells_only=False,
+            pairwise_only=True,
         )
         adata = pw_ds.load_inhibitory_cells(unmixed=True, all_spots=False, as_anndata=True)
         adata.obs["mouse_id"] = mouse_id
