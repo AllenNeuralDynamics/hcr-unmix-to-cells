@@ -709,16 +709,7 @@ def plot_gene_distributions_by_mouse(
     X_log = hcr_log.X if not hasattr(hcr_log.X, "toarray") else hcr_log.X.toarray()
     X_corr = hcr_corrected.X if not hasattr(hcr_corrected.X, "toarray") else hcr_corrected.X.toarray()
     mice = sorted(np.unique(hcr_log.obs["mouse_id"].values))
-    # Preset colors for known mice; any other mouse (new subjects, single-mouse
-    # runs) gets a generated fallback so the palette always covers every mouse
-    # present — otherwise seaborn raises "palette dictionary is missing keys".
-    preset_colors = {"790322": "#1b9e77", "782149": "#d95f02", "788406": "#7570b3"}
-    fallback_colors = sns.color_palette("husl", n_colors=len(mice))
     mouse_order = [f"M{m}" for m in mice]
-    mouse_palette = {
-        f"M{m}": preset_colors.get(str(m), fallback_colors[i])
-        for i, m in enumerate(mice)
-    }
 
     # --- Pre-correction grid ---
     fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 2.5, nrows * 2.5))
@@ -731,9 +722,9 @@ def plot_gene_distributions_by_mouse(
             "mouse_id": hcr_log.obs["mouse_id"].values,
         })
         df["mouse_label"] = "M" + df["mouse_id"].astype(str)
-        sns.violinplot(data=df, x="mouse_label", y="expression", hue="mouse_label", ax=ax,
+        sns.violinplot(data=df, x="mouse_label", y="expression", ax=ax,
                        inner="quartile", density_norm="width", cut=0,
-                       palette=mouse_palette, order=mouse_order, legend=False)
+                       order=mouse_order)
         ax.set_title(gene, fontsize=9, fontweight="bold")
         ax.set_xlabel("")
         ax.set_ylabel("")
@@ -757,9 +748,9 @@ def plot_gene_distributions_by_mouse(
             "mouse_id": hcr_corrected.obs["mouse_id"].values,
         })
         df["mouse_label"] = "M" + df["mouse_id"].astype(str)
-        sns.violinplot(data=df, x="mouse_label", y="expression", hue="mouse_label", ax=ax,
+        sns.violinplot(data=df, x="mouse_label", y="expression", ax=ax,
                        inner="quartile", density_norm="width", cut=0,
-                       palette=mouse_palette, order=mouse_order, legend=False)
+                       order=mouse_order)
         ax.set_title(gene, fontsize=9, fontweight="bold")
         ax.set_xlabel("")
         ax.set_ylabel("")
