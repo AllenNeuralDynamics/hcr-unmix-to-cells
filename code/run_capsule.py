@@ -380,3 +380,10 @@ if __name__ == "__main__":
             normalization=args.normalization,
             hcr_apply_pf=args.hcr_apply_pf,
         )
+
+    # --- consolidated cell typing table --------------------------------------
+    # Merge whichever method(s) ran into one root-level table of every HCR cell
+    # with its assignment(s): results/cell_typing_table.csv.
+    from cell_typing_table import build_cell_typing_table
+
+    build_cell_typing_table(output_root, mouse_id, spots=args.spots)
