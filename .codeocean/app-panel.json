@@ -33,6 +33,14 @@
 			"param_name": "normalization",
 			"type": "text",
 			"value_type": "string"
+		},
+		{
+			"id": "C06W4w8vqeJVFbAI",
+			"name": "--spots",
+			"param_name": "spots",
+			"type": "text",
+			"value_type": "string",
+			"default_value": "filtered"
 		}
 	]
 }
