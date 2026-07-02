@@ -242,6 +242,7 @@ def run_tasic_superclusters(
     scratch_root: Path,
     normalization: str = "log_zscore",
     hcr_apply_pf: bool = True,
+    spots: str = "filtered",
 ) -> None:
     """Run the Tasic supercluster matching strategy for one mouse.
 
@@ -255,6 +256,9 @@ def run_tasic_superclusters(
     normalization : per-cell normalization method passed to the pipeline
         ("log_zscore" default, "clr_shift", or "pflogpf"). hcr_apply_pf toggles
         the HCR depth-normalizing PF step for pflogpf.
+    spots : which HCR inhibitory cell-by-gene table to load — "filtered"
+        (default) or "all_spots" (unfiltered). Same axis as the MapMyCells
+        --spots flag; Tasic is always inhibitory-only.
 
     NOTE(data-asset): requires the Tasic 2018 Smart-seq reference to be mounted
     and pointed at via the TASIC_SMARTSEQ_DIR env var (see SS_PATH in
@@ -270,6 +274,7 @@ def run_tasic_superclusters(
     print(f"Output dir          : {out_dir}")
     print(f"Scratch dir         : {scratch_dir}")
     print(f"Normalization       : {normalization} (hcr_apply_pf={hcr_apply_pf})")
+    print(f"Spots               : {spots}")
     print(f"{'='*60}\n")
 
     # One mouse at a time → cross-mouse batch correction is a no-op; use "none".
@@ -280,6 +285,7 @@ def run_tasic_superclusters(
         batch_mode="none",
         normalization=normalization,
         hcr_apply_pf=hcr_apply_pf,
+        all_spots=(spots == "all_spots"),
     )
 
 
@@ -308,7 +314,10 @@ if __name__ == "__main__":
         type=str,
         choices=SPOT_CHOICES,
         default="filtered",
-        help="(MapMyCells) which spot subset to map: 'filtered' (default) or 'all_spots'.",
+        help="Which HCR spot subset to use (applies to both strategies): "
+             "'filtered' (default) or 'all_spots' (unfiltered). MapMyCells maps "
+             "both the inhibitory and all-cells tables for this subset; Tasic "
+             "uses the inhibitory table for this subset.",
     )
     parser.add_argument(
         "--run-mapmycells",
@@ -379,6 +388,7 @@ if __name__ == "__main__":
             mouse_id, output_root, SCRATCH_ROOT,
             normalization=args.normalization,
             hcr_apply_pf=args.hcr_apply_pf,
+            spots=args.spots,
         )
 
     # --- consolidated cell typing table --------------------------------------

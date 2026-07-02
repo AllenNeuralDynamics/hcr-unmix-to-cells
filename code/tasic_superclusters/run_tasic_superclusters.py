@@ -89,12 +89,17 @@ MINOR_SUBCLASSES = {"Serpinf1", "CR", "Meis2"}
 def load_hcr_multi_mouse(
     mouse_ids: list[str],
     data_dir: Path = DATA_DIR,
+    all_spots: bool = False,
 ) -> ad.AnnData:
     """
     Load HCR inhibitory cell-by-gene data for multiple mice and concatenate.
 
     Each cell is tagged with a `mouse_id` column in .obs.
     Returns raw spot counts (not normalized).
+
+    all_spots : bool
+        Which spot-filtered table to load: False → the filtered cell-by-gene
+        table (default), True → the all-spots (unfiltered) table.
     """
     adatas = []
     for mouse_id in mouse_ids:
@@ -111,7 +116,7 @@ def load_hcr_multi_mouse(
             coreg_cells_only=False,
             pairwise_only=True,
         )
-        adata = pw_ds.load_inhibitory_cells(unmixed=True, all_spots=False, as_anndata=True)
+        adata = pw_ds.load_inhibitory_cells(unmixed=True, all_spots=all_spots, as_anndata=True)
         adata.obs["mouse_id"] = mouse_id
         # Ensure unique cell IDs across mice
         adata.obs_names = [f"{mouse_id}_{cid}" for cid in adata.obs_names]
@@ -444,6 +449,7 @@ def run_stage1(
     min_cells_per_cluster: int = 0,
     normalization: str = "log_zscore",
     hcr_apply_pf: bool = True,
+    all_spots: bool = False,
 ) -> tuple[ad.AnnData, ad.AnnData, ad.AnnData, ad.AnnData]:
     """
     Execute full Stage 1 pipeline.
@@ -474,7 +480,7 @@ def run_stage1(
 
     # 1.2 Load HCR multi-mouse
     print("\n[1.2] Loading HCR data for multiple mice...")
-    hcr_raw = load_hcr_multi_mouse(mouse_ids)
+    hcr_raw = load_hcr_multi_mouse(mouse_ids, all_spots=all_spots)
 
     # 1.1 Load Tasic — use HCR gene names to subset
     hcr_genes = [g for g in hcr_raw.var_names if g not in EXCLUDE_GENES]
@@ -4699,6 +4705,7 @@ def main(
     scratch_dir: Path | str | None = None,
     normalization: str = "log_zscore",
     hcr_apply_pf: bool = True,
+    all_spots: bool = False,
 ) -> None:
     # Resolve per-run output location and query mice. The capsule orchestrator
     # passes a single mouse id + a results/tasic_superclusters/<name> dir; when
@@ -4741,6 +4748,7 @@ def main(
         "scratch_dir": str(scratch),
         "normalization": normalization,
         "hcr_apply_pf": hcr_apply_pf,
+        "all_spots": all_spots,
     }
     run_params_path = OUT_ROOT / "run_params.json"
     with open(run_params_path, "w") as _f:
@@ -4785,6 +4793,7 @@ def main(
             min_cells_per_cluster=min_cells_per_cluster,
             normalization=normalization,
             hcr_apply_pf=hcr_apply_pf,
+            all_spots=all_spots,
         )
 
         # Stage 1 summary plots
