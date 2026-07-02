@@ -108,7 +108,10 @@ def load_mapmycells_table(results_root: Path, spots: str) -> pd.DataFrame | None
         print(f"[cell_typing_table] MapMyCells table not found: {path}")
         return None
 
-    df = pd.read_csv(path)
+    # cell_type_mapper prefixes basic_results.csv with '#'-commented metadata
+    # lines (taxonomy hierarchy, algorithm, version). Those lines contain commas,
+    # so they must be skipped or pandas raises a tokenizing error.
+    df = pd.read_csv(path, comment="#")
     print(f"[cell_typing_table] Loaded MapMyCells table ({len(df)} rows): {path}")
 
     df = df.drop(columns=[c for c in MMC_DROP if c in df.columns])
