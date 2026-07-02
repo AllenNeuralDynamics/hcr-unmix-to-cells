@@ -126,3 +126,31 @@ scratch/{output_name}/
 plots/
     └── *.png
 ```
+
+---
+
+## Cell typing table
+
+After the strategies run, a single consolidated table of every HCR cell with its
+assignment(s) is written to `results/cell_typing_table.csv`. If both strategies
+ran, the TASIC and MapMyCells per-method tables are merged (outer join) on the
+mouse-stripped cell id; if only one ran, it is a cleaned copy of that method's
+table. Columns from a method that did not type a given cell are left blank for
+that row.
+
+| Column | Source | Description |
+|---|---|---|
+| `cell_id` | both | Cell id with the `{mouse_id}_` prefix stripped; the merge key. |
+| `mouse_id` | both | Mouse (subject) id. |
+| `leiden_subclass` | TASIC | Inhibitory branch the cell was gated into (`Pvalb`, `Sst`, `Vip`, `Lamp5`). |
+| `leiden_assignment` | TASIC | Leiden-named within-branch cluster assignment. |
+| `leiden_confidence` | TASIC | Match confidence (Pearson correlation to the assigned cluster). |
+| `mapmycells_class_name` | MapMyCells | ABC-atlas **class** label (coarsest taxonomy level). |
+| `mapmycells_class_bootstrapping_probability` | MapMyCells | Fraction of bootstrap iterations supporting the class call. |
+| `mapmycells_subclass_name` | MapMyCells | ABC-atlas **subclass** label. |
+| `mapmycells_subclass_bootstrapping_probability` | MapMyCells | Bootstrap support for the subclass call. |
+| `mapmycells_supertype_name` | MapMyCells | ABC-atlas **supertype** label. |
+| `mapmycells_supertype_bootstrapping_probability` | MapMyCells | Bootstrap support for the supertype call. |
+| `mapmycells_cluster_name` | MapMyCells | ABC-atlas **cluster** label (finest taxonomy level). |
+| `mapmycells_cluster_alias` | MapMyCells | Numeric alias id for the assigned cluster. |
+| `mapmycells_cluster_bootstrapping_probability` | MapMyCells | Bootstrap support for the cluster call. |
