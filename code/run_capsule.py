@@ -138,7 +138,9 @@ def resolve_mouse_id_from_pipeline(pipeline_root: Path = PIPELINE_DATA_ROOT) -> 
 UNMIXING_ASSET_PATTERN_BY_SPOTS = {
     "filtered":  "HCR_{mouse}_pairwise-unmixing_*",
     "all_spots": "HCR_{mouse}_pairwise-unmixing_*",
-    "nnls":      "HCR_{mouse}_nnls-unmixing_*",
+    # trailing "*" (no "_") so it matches both the bare "HCR_<m>_nnls-unmixing"
+    # asset name and any timestamped variant.
+    "nnls":      "HCR_{mouse}_nnls-unmixing*",
 }
 
 

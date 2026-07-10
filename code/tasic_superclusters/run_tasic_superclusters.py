@@ -95,11 +95,11 @@ def _load_nnls_inhibitory_anndata(mouse_id: str, data_dir: Path = DATA_DIR) -> a
     """
     from aind_hcr_data_loader.pairwise_dataset import _cxg_dataframe_to_anndata
 
-    matches = sorted(Path(data_dir).glob(f"HCR_{mouse_id}_nnls-unmixing_*"))
+    matches = sorted(Path(data_dir).glob(f"HCR_{mouse_id}_nnls-unmixing*"))
     if not matches:
         raise FileNotFoundError(
             f"No NNLS-unmixing asset for mouse {mouse_id} in {data_dir} "
-            f"(searched HCR_{mouse_id}_nnls-unmixing_*)"
+            f"(searched HCR_{mouse_id}_nnls-unmixing*)"
         )
     csv = matches[-1] / "inhibitory_cells_nnls" / "nnls_inhibitory_cells.csv"
     if not csv.exists():
