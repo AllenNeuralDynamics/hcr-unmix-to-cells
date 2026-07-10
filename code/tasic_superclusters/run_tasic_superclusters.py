@@ -86,10 +86,34 @@ MINOR_SUBCLASSES = {"Serpinf1", "CR", "Meis2"}
 # =============================================================================
 
 
+def _load_nnls_inhibitory_anndata(mouse_id: str, data_dir: Path = DATA_DIR) -> ad.AnnData:
+    """Load the NNLS inhibitory cell-by-gene table (AnnData, gene-name columns).
+
+    Reads ``inhibitory_cells_nnls/nnls_inhibitory_cells.csv`` from the mounted
+    ``HCR_<mouse>_nnls-unmixing_*`` asset (the NNLS-only run's own derived asset),
+    reusing the same round-chan-gene → gene AnnData conversion as the pairwise loader.
+    """
+    from aind_hcr_data_loader.pairwise_dataset import _cxg_dataframe_to_anndata
+
+    matches = sorted(Path(data_dir).glob(f"HCR_{mouse_id}_nnls-unmixing_*"))
+    if not matches:
+        raise FileNotFoundError(
+            f"No NNLS-unmixing asset for mouse {mouse_id} in {data_dir} "
+            f"(searched HCR_{mouse_id}_nnls-unmixing_*)"
+        )
+    csv = matches[-1] / "inhibitory_cells_nnls" / "nnls_inhibitory_cells.csv"
+    if not csv.exists():
+        raise FileNotFoundError(f"NNLS inhibitory cells CSV not found: {csv}")
+    df = pd.read_csv(csv, index_col=0)
+    df.index.name = "cell_id"
+    return _cxg_dataframe_to_anndata(df)
+
+
 def load_hcr_multi_mouse(
     mouse_ids: list[str],
     data_dir: Path = DATA_DIR,
     all_spots: bool = False,
+    spots: str | None = None,
 ) -> ad.AnnData:
     """
     Load HCR inhibitory cell-by-gene data for multiple mice and concatenate.
@@ -97,26 +121,34 @@ def load_hcr_multi_mouse(
     Each cell is tagged with a `mouse_id` column in .obs.
     Returns raw spot counts (not normalized).
 
-    all_spots : bool
-        Which spot-filtered table to load: False → the filtered cell-by-gene
-        table (default), True → the all-spots (unfiltered) table.
+    spots : which cell-by-gene table to load — "filtered" (default), "all_spots"
+        (unfiltered), or "nnls" (the per-spot NNLS optical-ghost table, from the
+        HCR_<mouse>_nnls-unmixing_* asset). If None, derived from ``all_spots`` for
+        backwards compatibility.
     """
+    if spots is None:
+        spots = "all_spots" if all_spots else "filtered"
     adatas = []
     for mouse_id in mouse_ids:
-        print(f"  Loading HCR mouse {mouse_id}...")
-        # pairwise_only=True: this pipeline reads only the pairwise-unmixing
-        # asset (via load_inhibitory_cells), so skip building the full
-        # multi-round HCRDataset. That lets the capsule run with only the
-        # pairwise asset mounted instead of all of the processed round assets.
-        _, pw_ds, _ = get_hcr_dataset_pairwise(
-            mouse_id=mouse_id,
-            data_dir=data_dir,
-            load_spots=False,
-            return_removed=False,
-            coreg_cells_only=False,
-            pairwise_only=True,
-        )
-        adata = pw_ds.load_inhibitory_cells(unmixed=True, all_spots=all_spots, as_anndata=True)
+        print(f"  Loading HCR mouse {mouse_id} (spots={spots})...")
+        if spots == "nnls":
+            adata = _load_nnls_inhibitory_anndata(mouse_id, data_dir)
+        else:
+            # pairwise_only=True: this pipeline reads only the pairwise-unmixing
+            # asset (via load_inhibitory_cells), so skip building the full
+            # multi-round HCRDataset. That lets the capsule run with only the
+            # pairwise asset mounted instead of all of the processed round assets.
+            _, pw_ds, _ = get_hcr_dataset_pairwise(
+                mouse_id=mouse_id,
+                data_dir=data_dir,
+                load_spots=False,
+                return_removed=False,
+                coreg_cells_only=False,
+                pairwise_only=True,
+            )
+            adata = pw_ds.load_inhibitory_cells(
+                unmixed=True, all_spots=(spots == "all_spots"), as_anndata=True,
+            )
         adata.obs["mouse_id"] = mouse_id
         # Ensure unique cell IDs across mice
         adata.obs_names = [f"{mouse_id}_{cid}" for cid in adata.obs_names]
@@ -450,6 +482,7 @@ def run_stage1(
     normalization: str = "log_zscore",
     hcr_apply_pf: bool = True,
     all_spots: bool = False,
+    spots: str | None = None,
 ) -> tuple[ad.AnnData, ad.AnnData, ad.AnnData, ad.AnnData]:
     """
     Execute full Stage 1 pipeline.
@@ -480,7 +513,7 @@ def run_stage1(
 
     # 1.2 Load HCR multi-mouse
     print("\n[1.2] Loading HCR data for multiple mice...")
-    hcr_raw = load_hcr_multi_mouse(mouse_ids, all_spots=all_spots)
+    hcr_raw = load_hcr_multi_mouse(mouse_ids, all_spots=all_spots, spots=spots)
 
     # 1.1 Load Tasic — use HCR gene names to subset
     hcr_genes = [g for g in hcr_raw.var_names if g not in EXCLUDE_GENES]
@@ -4704,6 +4737,7 @@ def main(
     normalization: str = "log_zscore",
     hcr_apply_pf: bool = True,
     all_spots: bool = False,
+    spots: str | None = None,
 ) -> None:
     # Resolve per-run output location and query mice. The capsule orchestrator
     # passes a single mouse id + a results/tasic_superclusters/<name> dir; when
@@ -4747,6 +4781,7 @@ def main(
         "normalization": normalization,
         "hcr_apply_pf": hcr_apply_pf,
         "all_spots": all_spots,
+        "spots": spots if spots is not None else ("all_spots" if all_spots else "filtered"),
     }
     run_params_path = OUT_ROOT / "run_params.json"
     with open(run_params_path, "w") as _f:
@@ -4792,6 +4827,7 @@ def main(
             normalization=normalization,
             hcr_apply_pf=hcr_apply_pf,
             all_spots=all_spots,
+            spots=spots,
         )
 
         # Stage 1 summary plots

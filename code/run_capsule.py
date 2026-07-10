@@ -47,7 +47,7 @@ PIPELINE_DATA_ROOT = Path("/data/pipeline_data")
 RESULTS_ROOT       = Path("/root/capsule/results")
 SCRATCH_ROOT       = Path("/root/capsule/scratch")
 PARAMS_PATH        = "/root/capsule/code/params.json"
-SPOT_CHOICES = ("filtered", "all_spots")
+SPOT_CHOICES = ("filtered", "all_spots", "nnls")
 
 _TRUE_STRINGS = {"1", "true", "t", "yes", "y", "on"}
 _FALSE_STRINGS = {"0", "false", "f", "no", "n", "off"}
@@ -80,6 +80,9 @@ INHIBITORY_CSV_CANDIDATES_BY_SPOTS = {
         "inhibitory_cells_unmixed_all_spots/unmixed_inhibitory_cells.csv",
         "inhibitory_cells_unmixed/unmixed_inhibitory_cells.csv",  # legacy
     ],
+    "nnls": [
+        "inhibitory_cells_nnls/nnls_inhibitory_cells.csv",
+    ],
 }
 
 ALL_CELLS_CSV_CANDIDATES_BY_SPOTS = {
@@ -94,6 +97,9 @@ ALL_CELLS_CSV_CANDIDATES_BY_SPOTS = {
         "all_cells_unmixed_all_spots/unmixed_all_cells.csv",
         "all_cells_unmixed/unmixed_all_cells.csv",                # legacy
         "unmixed_cell_by_gene_all_rounds.csv",                    # legacy fallback
+    ],
+    "nnls": [
+        "all_cells_nnls/nnls_all_cells.csv",
     ],
 }
 
@@ -126,26 +132,43 @@ def resolve_mouse_id_from_pipeline(pipeline_root: Path = PIPELINE_DATA_ROOT) -> 
     return mouse_id
 
 
-def find_pairwise_unmixing_asset(mouse_id: str, data_root: Path = DATA_ROOT) -> Path:
-    """Return the pairwise-unmixing folder for *mouse_id*.
+# Which mounted derived asset holds the cell-by-gene tables for each spot mode.
+# filtered/all_spots come from the pairwise-unmixing asset; nnls comes from the
+# NNLS-only run's own derived asset (HCR_<mouse>_nnls-unmixing_*).
+UNMIXING_ASSET_PATTERN_BY_SPOTS = {
+    "filtered":  "HCR_{mouse}_pairwise-unmixing_*",
+    "all_spots": "HCR_{mouse}_pairwise-unmixing_*",
+    "nnls":      "HCR_{mouse}_nnls-unmixing_*",
+}
 
-    Looks for a directory matching ``HCR_{mouse_id}_pairwise-unmixing_*``
-    inside *data_root* and returns the first match.
+
+def find_unmixing_asset(mouse_id: str, spots: str = "filtered",
+                        data_root: Path = DATA_ROOT) -> Path:
+    """Return the mounted unmixing asset folder for *mouse_id* and *spots* mode.
+
+    Looks for the pattern in UNMIXING_ASSET_PATTERN_BY_SPOTS (pairwise-unmixing for
+    filtered/all_spots, nnls-unmixing for nnls) inside *data_root*; returns the
+    most-recent match.
 
     Raises
     ------
     FileNotFoundError
         If no matching folder is found.
     """
-    pattern = f"HCR_{mouse_id}_pairwise-unmixing_*"
+    pattern = UNMIXING_ASSET_PATTERN_BY_SPOTS.get(spots, UNMIXING_ASSET_PATTERN_BY_SPOTS["filtered"]).format(mouse=mouse_id)
     matches = sorted(data_root.glob(pattern))
     if not matches:
         raise FileNotFoundError(
-            f"No pairwise-unmixing asset found for mouse_id={mouse_id!r} "
+            f"No unmixing asset found for mouse_id={mouse_id!r} spots={spots!r} "
             f"(searched {data_root / pattern})"
         )
     # Use the most-recent folder if multiple timestamps exist
     return matches[-1]
+
+
+def find_pairwise_unmixing_asset(mouse_id: str, data_root: Path = DATA_ROOT) -> Path:
+    """Backwards-compatible alias: the pairwise-unmixing (filtered/all_spots) asset."""
+    return find_unmixing_asset(mouse_id, spots="filtered", data_root=data_root)
 
 
 def find_first_existing_csv(asset_folder: Path, candidate_subpaths: list[str]) -> Path | None:
@@ -167,7 +190,7 @@ def run_mapmycells(mouse_id: str, spots: str, output_root: Path, remaining: list
     """
     from run_taxonomy_mapper import main as _mapper_main  # lazy: heavy deps
 
-    asset_folder = find_pairwise_unmixing_asset(mouse_id)
+    asset_folder = find_unmixing_asset(mouse_id, spots)
     output_name = asset_folder.name  # e.g. HCR_767018_pairwise-unmixing_2026-03-06_12-00-00
     mmc_root = output_root / "mapmycells"
 
@@ -257,8 +280,9 @@ def run_tasic_superclusters(
         ("log_zscore" default, "clr_shift", or "pflogpf"). hcr_apply_pf toggles
         the HCR depth-normalizing PF step for pflogpf.
     spots : which HCR inhibitory cell-by-gene table to load — "filtered"
-        (default) or "all_spots" (unfiltered). Same axis as the MapMyCells
-        --spots flag; Tasic is always inhibitory-only.
+        (default), "all_spots" (unfiltered), or "nnls" (per-spot NNLS
+        optical-ghost table). Same axis as the MapMyCells --spots flag; Tasic
+        is always inhibitory-only.
 
     NOTE(data-asset): requires the Tasic 2018 Smart-seq reference to be mounted
     and pointed at via the TASIC_SMARTSEQ_DIR env var (see SS_PATH in
@@ -286,6 +310,7 @@ def run_tasic_superclusters(
         normalization=normalization,
         hcr_apply_pf=hcr_apply_pf,
         all_spots=(spots == "all_spots"),
+        spots=spots,
     )
 
 
