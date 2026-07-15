@@ -1,4 +1,4 @@
-# hash:sha256:f6b39419cbcda13e204b36a7235239b39ed61233bb58bf7477b2297465ba6e65
+# hash:sha256:9a1be2ee3b6940c3183c2a1a0695e426bb3c84ce89b6ae702a621a2c8c075c65
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/code-server-python-extensions-pack:code-server4.108.2python3.12.4aind-metadata-mcp0.5.2withDOTFILES_REPOsupport
 
@@ -22,7 +22,7 @@ RUN --mount=type=secret,id=git-access-token \
     -e git+https://github.com/AllenInstitute/xenium_analysis_tools@7844a9e5c3d2298316389e9392949db8fce0d34b#egg=xenium-analysis-tools \
     -e git+https://github.com/AllenNeuralDynamics/aind-hcr-data-loader.git@cc6af69cb95c9b61c905ec29e8242c9bca21c3e1#egg=aind-hcr-data-loader \
     -e git+https://github.com/AllenNeuralDynamics/aind-hcr-qc.git@e03778d64390b3e70c7cea81ac923944520a55eb#egg=aind-hcr-qc \
-    -e git+https://github.com/AllenNeuralDynamics/ophys-mfish-dataset-catalog.git@8f02ff8316d93187c8d28d34d7f42a74e798fd66#egg=ophys-mfish-dataset-catalog
+    -e git+https://github.com/AllenNeuralDynamics/ophys-mfish-dataset-catalog.git@main#egg=ophys-mfish-dataset-catalog
 
 COPY postInstall /
 RUN --mount=type=secret,id=secrets . /run/secrets/secrets \
