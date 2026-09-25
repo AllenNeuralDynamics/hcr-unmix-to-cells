@@ -52,3 +52,21 @@ def test_cell_typing_table_includes_gmm_labels(tmp_path):
                   "Vip": [300, 0]}).to_csv(subtypes / "cell_subtypes_clustering_genes.csv", index=False)
     table = pd.read_csv(build_cell_typing_table(tmp_path, "839909", gmm_spots="all_spots"))
     assert table.set_index("cell_id")["gmm_subtype"].to_dict() == {5: "Vip_Calb2", 9: "Sst"}
+
+
+def test_cell_typing_table_covers_all_cells_when_classes_ran(tmp_path):
+    folder = tmp_path / "inhibitory_gmm"
+    folder.mkdir()
+    pd.DataFrame({
+        "cell_id": [5, 9, 11], "class": ["Inhibitory", "Excitatory", "Unassigned"],
+        "inhibitory_gate": [True, False, False], "slc17a7_positive": [False, True, False],
+        "excitatory_cluster": [None, "e0_Slc17a7", None], "subclass": ["Vip", None, None],
+        "subtype": ["Vip_Calb2", None, None], "gmm_cluster": [3, None, None],
+        "GFP": [1, 2, 3], "Slc17a7": [4, 300, 0],
+    }).to_csv(folder / "cell_classes.csv", index=False)
+    table = pd.read_csv(build_cell_typing_table(tmp_path, "839909", gmm_spots="all_spots"))
+    assert len(table) == 3
+    assert list(table.columns)[:8] == ["cell_id", "mouse_id", "class", "subclass", "subtype",
+                                       "excitatory_cluster", "inhibitory_gate", "slc17a7_positive"]
+    assert list(table.columns)[-2:] == ["GFP", "Slc17a7"]
+    assert table["gmm_inhibitory"].tolist() == [True, False, False]

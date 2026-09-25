@@ -23,6 +23,11 @@ All notable changes to this capsule are documented in this file.
   heatmaps under `inhibitory_gmm/subtypes/`. On in `p3_mixed_inhibitory_gmm_no_gfp`
   (Pvalb 1, Sst 3, Vip 3, Other 2; all-gene k = 10); adds `gmm_subclass` / `gmm_subtype` to
   `cell_typing_table.csv`.
+- Added **cell classes** for every cell ([code/inhibitory_gmm/classes.py](code/inhibitory_gmm/classes.py)):
+  Inhibitory / Excitatory / Ambiguous / Unassigned from the inhibitory set and a Slc17a7 GMM
+  threshold, plus an excitatory-only k-means (k = 4, `Exc_1..4` by brightness) under
+  `results/excitatory/`. The root `cell_typing_table.csv` then covers all cells with `class`,
+  `subclass`, `subtype`, `excitatory_cluster` first. On in `p3_mixed_inhibitory_gmm_no_gfp`.
 - Added unit tests under `tests/`.
 
 ## 2026-05-28

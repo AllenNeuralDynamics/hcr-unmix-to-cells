@@ -85,6 +85,9 @@ DEFAULT_SETTINGS = {
     "gmm_subtype_exclude": ["GFP", "Slc17a7", "Gad2"],
     "gmm_subtype_k": None,
     "gmm_all_gene_k": 10,
+    "gmm_classes": False,
+    "gmm_excitatory_k": 4,
+    "gmm_excitatory_exclude": ["GFP"],
 }
 _SETTING_CHOICES = {
     "spots": SPOT_CHOICES,
@@ -544,6 +547,10 @@ if __name__ == "__main__":
                 fixed_k=settings["gmm_subtype_k"],
                 all_gene_k=settings["gmm_all_gene_k"],
             ) if settings["gmm_subtypes"] else None,
+            classes=dict(
+                excitatory_k=settings["gmm_excitatory_k"],
+                excitatory_exclude=settings["gmm_excitatory_exclude"],
+            ) if settings["gmm_classes"] else None,
         )
 
     # --- consolidated cell typing table --------------------------------------
