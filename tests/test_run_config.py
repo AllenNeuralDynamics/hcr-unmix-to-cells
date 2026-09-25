@@ -45,3 +45,10 @@ def test_cell_typing_table_includes_gmm_labels(tmp_path):
     assert list(table.columns) == ["cell_id", "mouse_id", "gmm_cluster", "gmm_inhibitory"]
     assert table.set_index("cell_id")["gmm_cluster"].to_dict() == {5: 3, 9: 0}
     assert build_cell_typing_table(tmp_path / "empty", "839909") is None
+
+    subtypes = tmp_path / "inhibitory_gmm" / "subtypes"
+    subtypes.mkdir()
+    pd.DataFrame({"cell_id": [5, 9], "subclass": ["Vip", "Sst"], "subtype": ["Vip_Calb2", "Sst"],
+                  "Vip": [300, 0]}).to_csv(subtypes / "cell_subtypes_clustering_genes.csv", index=False)
+    table = pd.read_csv(build_cell_typing_table(tmp_path, "839909", gmm_spots="all_spots"))
+    assert table.set_index("cell_id")["gmm_subtype"].to_dict() == {5: "Vip_Calb2", 9: "Sst"}

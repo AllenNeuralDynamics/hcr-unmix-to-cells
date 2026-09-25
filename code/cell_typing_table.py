@@ -65,6 +65,7 @@ GMM_RESULT_SUBPATH_TEMPLATE = (
     "inhibitory_gmm/inhibitory_cells_mixed_{spots}/mixed_cluster_labels_{spots}.csv"
 )
 GMM_PREFIX = "gmm_"
+GMM_SUBTYPE_SUBPATH = "inhibitory_gmm/subtypes/cell_subtypes_clustering_genes.csv"
 
 
 def _strip_mouse_prefix(cell_id: str, mouse_id: str) -> str:
@@ -144,6 +145,13 @@ def load_gmm_table(results_root: Path, spots: str) -> pd.DataFrame | None:
     df = df.rename(columns={"cluster": f"{GMM_PREFIX}cluster"})
     df[f"{GMM_PREFIX}inhibitory"] = True
     df[MERGE_KEY] = df[MERGE_KEY].astype(str)
+    subtypes = results_root / GMM_SUBTYPE_SUBPATH
+    if subtypes.exists():
+        sub = pd.read_csv(subtypes, usecols=[MERGE_KEY, "subclass", "subtype"])
+        sub = sub.rename(columns={"subclass": f"{GMM_PREFIX}subclass", "subtype": f"{GMM_PREFIX}subtype"})
+        sub[MERGE_KEY] = sub[MERGE_KEY].astype(str)
+        df = df.merge(sub, on=MERGE_KEY, how="left")
+        print(f"[cell_typing_table] Added GMM subclass/subtype labels: {subtypes}")
     return df
 
 

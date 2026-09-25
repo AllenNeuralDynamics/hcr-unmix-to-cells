@@ -17,6 +17,12 @@ All notable changes to this capsule are documented in this file.
 - App panel: added `--config`, `--run-inhibitory-gmm`, `--gmm-spots` and `--gmm-source`; removed
   the `--run-*` and `--spots` defaults so an untouched panel does not override a preset.
 - `cell_typing_table.csv` gains `gmm_cluster` / `gmm_inhibitory` when the GMM strategy ran.
+- Added inhibitory **subclasses and subtypes** ([code/inhibitory_gmm/subtypes.py](code/inhibitory_gmm/subtypes.py)):
+  Pvalb/Sst/Vip/Other from GMM positivity, fixed-k subtypes per subclass on log1p counts
+  (GFP, Slc17a7, Gad2 excluded), an all-gene k-means, three per-cell tables and three raw-count
+  heatmaps under `inhibitory_gmm/subtypes/`. On in `p3_mixed_inhibitory_gmm_no_gfp`
+  (Pvalb 1, Sst 3, Vip 3, Other 2; all-gene k = 10); adds `gmm_subclass` / `gmm_subtype` to
+  `cell_typing_table.csv`.
 - Added unit tests under `tests/`.
 
 ## 2026-05-28

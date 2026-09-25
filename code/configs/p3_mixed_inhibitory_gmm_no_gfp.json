@@ -1,10 +1,15 @@
 {
-  "description": "P3 inhibitory GMM without GFP in the gate, for mice where GFP is pan-neuronal (e.g. 839909): Gad2/Pvalb/Sst/Vip/Npy only.",
+  "description": "P3 inhibitory GMM without GFP in the gate, for mice where GFP is pan-neuronal (e.g. 839909): Gad2/Pvalb/Sst/Vip/Npy only. Then subclasses (Pvalb/Sst/Vip/Other from GMM positivity), fixed-k subtypes on log1p Calb2/Npy/Pvalb/Sst/Vip, and an all-gene k=10 k-means.",
   "run_inhibitory_gmm": true,
   "gmm_spots": "all_spots",
   "gmm_source": "auto",
   "gmm_genes": ["Pvalb", "Sst", "Vip", "Npy", "Gad2"],
   "gmm_slc17a7_max": 150,
   "gmm_k": 20,
-  "gmm_clip_max": 200
+  "gmm_clip_max": 200,
+  "gmm_subtypes": true,
+  "gmm_subclass_genes": ["Pvalb", "Sst", "Vip"],
+  "gmm_subtype_exclude": ["GFP", "Slc17a7", "Gad2"],
+  "gmm_subtype_k": {"Pvalb": 1, "Sst": 3, "Vip": 3, "Other": 2},
+  "gmm_all_gene_k": 10
 }

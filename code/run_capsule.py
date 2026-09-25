@@ -80,6 +80,11 @@ DEFAULT_SETTINGS = {
     "gmm_slc17a7_max": 150,
     "gmm_k": 20,
     "gmm_clip_max": 200,
+    "gmm_subtypes": False,
+    "gmm_subclass_genes": ["Pvalb", "Sst", "Vip"],
+    "gmm_subtype_exclude": ["GFP", "Slc17a7", "Gad2"],
+    "gmm_subtype_k": None,
+    "gmm_all_gene_k": 10,
 }
 _SETTING_CHOICES = {
     "spots": SPOT_CHOICES,
@@ -533,6 +538,12 @@ if __name__ == "__main__":
             slc17a7_max=settings["gmm_slc17a7_max"],
             k=settings["gmm_k"],
             clip_max=settings["gmm_clip_max"],
+            subtypes=dict(
+                subclass_genes=settings["gmm_subclass_genes"],
+                exclude=settings["gmm_subtype_exclude"],
+                fixed_k=settings["gmm_subtype_k"],
+                all_gene_k=settings["gmm_all_gene_k"],
+            ) if settings["gmm_subtypes"] else None,
         )
 
     # --- consolidated cell typing table --------------------------------------

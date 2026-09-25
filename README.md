@@ -21,7 +21,7 @@ tweaked for one run (e.g. `--config p3_mixed_inhibitory_gmm --gmm-source process
 | `mapmycells` | MapMyCells on the pairwise-unmixing `filtered` tables |
 | `tasic_superclusters` | Tasic supercluster matching, `log_zscore` normalization |
 | `p3_mixed_inhibitory_gmm` | Inhibitory GMM on the mixed `all_spots` table (P3 data) |
-| `p3_mixed_inhibitory_gmm_no_gfp` | Same, without GFP in the gate — use when GFP is pan-neuronal (e.g. 839909) |
+| `p3_mixed_inhibitory_gmm_no_gfp` | Same, without GFP in the gate — use when GFP is pan-neuronal (e.g. 839909) — plus subclasses and fixed-k subtypes |
 
 A preset is a JSON object of `run_capsule.py` options (`run_*`, `spots`, `normalization`,
 `hcr_apply_pf`, `gmm_*`, plus an optional `description`); unknown keys are rejected. The app
@@ -136,6 +136,31 @@ pairwise file is indexed by heatmap row and only lines up with `*_sorted_cell_id
 GMM genes, the Slc17a7 cutoff, `k` and the heatmap clip are preset keys (`gmm_genes`,
 `gmm_slc17a7_max`, `gmm_k`, `gmm_clip_max`).
 
+**Subclasses and subtypes** (`gmm_subtypes: true`, on in `p3_mixed_inhibitory_gmm_no_gfp`) run on
+the GMM-selected inhibitory cells and write `inhibitory_gmm/subtypes/`:
+
+1. *Subclass* — `Pvalb` / `Sst` / `Vip` when the cell passes that gene's GMM threshold (counts
+   under 5 zeroed). A cell positive for several goes to the gene it exceeds its own threshold by
+   most (log2 fold) and is flagged `conflict`; a cell positive for none is `Other`.
+2. *Subtype* — k-means within each subclass on log1p counts of every gene except
+   `gmm_subtype_exclude` (GFP, Slc17a7, Gad2), with k from `gmm_subtype_k`
+   (Pvalb 1, Sst 3, Vip 3, Other 2). Named `<subclass>_<gene>` after the expressed gene that
+   most separates the sub-cluster from its siblings, or `<subclass>_only`.
+3. *All-gene k-means* — k = `gmm_all_gene_k` (10) on log1p counts of every gene, for comparison.
+
+```
+inhibitory_gmm/subtypes/
+├── cell_subtypes_clustering_genes.csv    cell_id, subclass, subtype, clustering-gene counts
+├── cell_subtypes_all_genes.csv           same, all genes (GFP, Slc17a7, Gad2 first)
+├── cell_all_gene_k10.csv                 + all-gene k-means label and silhouette
+├── subtypes_cxg.png                      raw counts (10-200), clustering genes
+├── subtypes_cxg_all_genes.png            raw counts, all genes (clustering genes in bold)
+├── all_gene_k10_cxg.png                  raw counts, all-gene k-means
+├── subtype_summary.csv                   cells, conflicts, silhouette, median counts per subtype
+├── subtype_vs_all_gene_k10.csv           subtype x all-gene cluster counts
+└── silhouette_by_subclass.csv            silhouette vs k (2-8) per subclass
+```
+
 **MapMyCells** writes under `/root/capsule/results/mapmycells/` into spot-specific folders:
 - `inhibitory_cells_filtered` / `all_cells_filtered`
 - `inhibitory_cells_all_spots` / `all_cells_all_spots`
@@ -192,7 +217,8 @@ assignment(s) is written to `results/cell_typing_table.csv`. The per-method tabl
 are merged (outer join) on the mouse-stripped cell id; if only one method ran, it
 is a cleaned copy of that method's table. Columns from a method that did not type
 a given cell are left blank for that row. When the inhibitory GMM ran, `gmm_cluster`
-(k-means cluster) and `gmm_inhibitory` (`True` for GMM-selected cells) are appended.
+(k-means cluster) and `gmm_inhibitory` (`True` for GMM-selected cells) are appended, plus
+`gmm_subclass` / `gmm_subtype` when the subtype step ran.
 
 | Column | Source | Description |
 |---|---|---|
