@@ -1,14 +1,25 @@
 """
-Top-level run script – orchestrates the two cell-typing strategies in this
+Top-level run script – orchestrates the cell-typing strategies in this
 capsule, selected by boolean flags:
 
     --run-mapmycells            Taxonomy mapping (MapMyCells / cell_type_mapper).
                                 Outputs → results/mapmycells/
     --run-tasic-superclusters   Tasic supercluster matching pipeline.
                                 Outputs → results/tasic_superclusters/
+    --run-inhibitory-gmm        Mixed spot table → per-gene GMM inhibitory gating →
+                                Slc17a7 QC → k-means clusters (the pairwise capsule's
+                                inhibitory analysis). Reads processed round assets, a
+                                spot-parquet asset, or a pairwise-unmixing asset.
+                                Outputs → results/inhibitory_gmm/
 
 Default (no flag): run MapMyCells only (preserves the original behavior).
-Pass both flags to run both strategies in one invocation.
+Pass several flags to run several strategies in one invocation.
+
+Configurations
+--------------
+``--config <name>`` loads ``code/configs/<name>.json`` (or a path to a JSON file), a
+preset of the options below. Precedence: explicit command-line value > preset > built-in
+default, so a preset can be tweaked from the app panel without editing it.
 
 Mouse-id resolution (shared by both strategies)
 -----------------------------------------------
@@ -27,9 +38,11 @@ python run_capsule.py --mouse-id 767018
 python run_capsule.py --mouse-id 767018 --run-tasic-superclusters
 python run_capsule.py --mouse-id 767018 --run-mapmycells --run-tasic-superclusters
 python run_capsule.py --mouse-id 767018 --spots all_spots
+python run_capsule.py --mouse-id 839909 --config p3_mixed_inhibitory_gmm
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -47,7 +60,33 @@ PIPELINE_DATA_ROOT = Path("/data/pipeline_data")
 RESULTS_ROOT       = Path("/root/capsule/results")
 SCRATCH_ROOT       = Path("/root/capsule/scratch")
 PARAMS_PATH        = "/root/capsule/code/params.json"
+CONFIG_DIR         = CODE_DIR / "configs"
 SPOT_CHOICES = ("filtered", "all_spots", "nnls")
+GMM_SPOT_CHOICES = ("filtered", "all_spots")
+GMM_SOURCE_CHOICES = ("auto", "pairwise", "spot_parquet", "processed")
+NORMALIZATION_CHOICES = ("log_zscore", "clr_shift", "pflogpf")
+
+# Every option a --config preset may set, with its built-in default.
+DEFAULT_SETTINGS = {
+    "run_mapmycells": False,
+    "run_tasic_superclusters": False,
+    "run_inhibitory_gmm": False,
+    "spots": "filtered",
+    "normalization": "log_zscore",
+    "hcr_apply_pf": False,
+    "gmm_spots": "all_spots",
+    "gmm_source": "auto",
+    "gmm_genes": None,
+    "gmm_slc17a7_max": 150,
+    "gmm_k": 20,
+    "gmm_clip_max": 200,
+}
+_SETTING_CHOICES = {
+    "spots": SPOT_CHOICES,
+    "gmm_spots": GMM_SPOT_CHOICES,
+    "gmm_source": GMM_SOURCE_CHOICES,
+    "normalization": NORMALIZATION_CHOICES,
+}
 
 _TRUE_STRINGS = {"1", "true", "t", "yes", "y", "on"}
 _FALSE_STRINGS = {"0", "false", "f", "no", "n", "off"}
@@ -68,6 +107,35 @@ def str2bool(value):
     if v in _FALSE_STRINGS:
         return False
     raise argparse.ArgumentTypeError(f"expected a boolean value, got {value!r}")
+
+
+def load_config(name: str | None) -> dict:
+    """Return a preset from ``code/configs/<name>.json`` or a JSON path (``{}`` for none)."""
+    if not name:
+        return {}
+    path = Path(name)
+    if not path.suffix:
+        path = CONFIG_DIR / f"{name}.json"
+    if not path.exists():
+        available = sorted(p.stem for p in CONFIG_DIR.glob("*.json"))
+        raise FileNotFoundError(f"Config {name!r} not found ({path}); available: {available}")
+    with open(path) as f:
+        preset = json.load(f)
+    preset.pop("description", None)
+    unknown = sorted(set(preset) - set(DEFAULT_SETTINGS))
+    if unknown:
+        raise ValueError(f"Config {path.name} has unknown keys {unknown}")
+    return preset
+
+
+def resolve_settings(cli: dict, config_name: str | None) -> dict:
+    """Merge built-in defaults < preset < explicit CLI values (``None`` = not given)."""
+    settings = {**DEFAULT_SETTINGS, **load_config(config_name)}
+    settings.update({k: v for k, v in cli.items() if k in DEFAULT_SETTINGS and v is not None})
+    for key, choices in _SETTING_CHOICES.items():
+        if settings[key] not in choices:
+            raise ValueError(f"{key}={settings[key]!r} is not one of {choices}")
+    return settings
 
 INHIBITORY_CSV_CANDIDATES_BY_SPOTS = {
     "filtered": [
@@ -337,11 +405,18 @@ if __name__ == "__main__":
         help="Base directory for all outputs (default: /root/capsule/results)",
     )
     parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Preset name in code/configs/ (e.g. mapmycells, tasic_superclusters, "
+             "p3_mixed_inhibitory_gmm) or a JSON path. Explicit arguments override it.",
+    )
+    parser.add_argument(
         "--spots",
         type=str,
         choices=SPOT_CHOICES,
-        default="filtered",
-        help="Which HCR spot subset to use (applies to both strategies): "
+        default=None,
+        help="Which HCR spot subset to use (MapMyCells and Tasic): "
              "'filtered' (default) or 'all_spots' (unfiltered). MapMyCells maps "
              "both the inhibitory and all-cells tables for this subset; Tasic "
              "uses the inhibitory table for this subset.",
@@ -351,7 +426,7 @@ if __name__ == "__main__":
         type=str2bool,
         nargs="?",
         const=True,
-        default=False,
+        default=None,
         help="Run taxonomy mapping (MapMyCells) → results/mapmycells/ "
              "(true/false). Default strategy when no --run-* flag is true.",
     )
@@ -360,15 +435,40 @@ if __name__ == "__main__":
         type=str2bool,
         nargs="?",
         const=True,
-        default=False,
+        default=None,
         help="Run Tasic supercluster matching → results/tasic_superclusters/ "
              "(true/false).",
     )
     parser.add_argument(
+        "--run-inhibitory-gmm",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=None,
+        help="Run mixed-spot inhibitory GMM gating + k-means clusters → "
+             "results/inhibitory_gmm/ (true/false).",
+    )
+    parser.add_argument(
+        "--gmm-spots",
+        type=str,
+        choices=GMM_SPOT_CHOICES,
+        default=None,
+        help="(Inhibitory GMM) mixed spot subset: 'all_spots' (default) or 'filtered' "
+             "(valid_spot QC; needs a pairwise-unmixing asset).",
+    )
+    parser.add_argument(
+        "--gmm-source",
+        type=str,
+        choices=GMM_SOURCE_CHOICES,
+        default=None,
+        help="(Inhibitory GMM) where the per-round spot tables come from: 'auto' "
+             "(default: pairwise, then spot_parquet, then processed), or one of them.",
+    )
+    parser.add_argument(
         "--normalization",
         type=str,
-        default="log_zscore",
-        choices=["log_zscore", "clr_shift", "pflogpf"],
+        default=None,
+        choices=NORMALIZATION_CHOICES,
         help="(Tasic) per-cell normalization before gene z-scoring: 'log_zscore' "
              "(default, original), 'clr_shift' (base log-norm + per-cell centering), "
              "or 'pflogpf' (PF -> log1p -> centering).",
@@ -378,17 +478,21 @@ if __name__ == "__main__":
         type=str2bool,
         nargs="?",
         const=True,
-        default=False,
+        default=None,
         help="(Tasic, pflogpf only) apply the depth-normalizing PF step to HCR "
              "(true/false). False keeps HCR depth-free but still centers cells.",
     )
     # Consume only known args; pass everything else straight to the mapper
     args, remaining = parser.parse_known_args()
+    settings = resolve_settings(vars(args), args.config)
+    print(f"Config: {args.config or '(none)'}")
+    print(f"Settings: {json.dumps(settings)}")
 
     # --- select strategies (default: MapMyCells only) ------------------------
-    run_mmc = args.run_mapmycells
-    run_tasic = args.run_tasic_superclusters
-    if not run_mmc and not run_tasic:
+    run_mmc = settings["run_mapmycells"]
+    run_tasic = settings["run_tasic_superclusters"]
+    run_gmm = settings["run_inhibitory_gmm"]
+    if not (run_mmc or run_tasic or run_gmm):
         run_mmc = True
         print("No strategy flag given; defaulting to --run-mapmycells.")
 
@@ -408,14 +512,27 @@ if __name__ == "__main__":
     output_root = Path(args.output_dir)
 
     if run_mmc:
-        run_mapmycells(mouse_id, args.spots, output_root, remaining)
+        run_mapmycells(mouse_id, settings["spots"], output_root, remaining)
 
     if run_tasic:
         run_tasic_superclusters(
             mouse_id, output_root, SCRATCH_ROOT,
-            normalization=args.normalization,
-            hcr_apply_pf=args.hcr_apply_pf,
-            spots=args.spots,
+            normalization=settings["normalization"],
+            hcr_apply_pf=settings["hcr_apply_pf"],
+            spots=settings["spots"],
+        )
+
+    if run_gmm:
+        from inhibitory_gmm.run_inhibitory_gmm import main as _gmm_main  # lazy: heavy deps
+
+        _gmm_main(
+            mouse_id, DATA_ROOT, output_root / "inhibitory_gmm",
+            spots=settings["gmm_spots"],
+            source=settings["gmm_source"],
+            genes=settings["gmm_genes"],
+            slc17a7_max=settings["gmm_slc17a7_max"],
+            k=settings["gmm_k"],
+            clip_max=settings["gmm_clip_max"],
         )
 
     # --- consolidated cell typing table --------------------------------------
@@ -423,4 +540,7 @@ if __name__ == "__main__":
     # with its assignment(s): results/cell_typing_table.csv.
     from cell_typing_table import build_cell_typing_table
 
-    build_cell_typing_table(output_root, mouse_id, spots=args.spots)
+    build_cell_typing_table(
+        output_root, mouse_id, spots=settings["spots"],
+        gmm_spots=settings["gmm_spots"] if run_gmm else None,
+    )

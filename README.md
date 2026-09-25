@@ -1,14 +1,31 @@
 # HCR Pairwise-Unmixing Cell Typing
 
-Assigns cell types to pairwise-unmixed HCR data using **two interchangeable strategies**,
-one mouse at a time:
+Assigns cell types to HCR data using **interchangeable strategies**, one mouse at a time:
 
 | Strategy | Flag | Output | Code |
 |---|---|---|---|
 | **MapMyCells** taxonomy mapping (ABC Atlas) | `--run-mapmycells` (default) | `results/mapmycells/` | [code/mapmycells/](code/mapmycells/) |
 | **Tasic supercluster** matching (Tasic 2018 Smart-seq) | `--run-tasic-superclusters` | `results/tasic_superclusters/` | [code/tasic_superclusters/](code/tasic_superclusters/) |
+| **Inhibitory GMM** on the mixed spot table (per-gene GMM gating, Slc17a7 QC, k-means clusters) | `--run-inhibitory-gmm` | `results/inhibitory_gmm/` | [code/inhibitory_gmm/](code/inhibitory_gmm/) |
 
-Pass neither flag → MapMyCells only (original behavior). Pass both → run both.
+Pass no flag → MapMyCells only (original behavior). Pass several → run several.
+
+## Configurations
+
+`--config <name>` loads a preset from [code/configs/](code/configs/); pick it from the app
+panel's **config** list. An explicit argument always overrides the preset, so a preset can be
+tweaked for one run (e.g. `--config p3_mixed_inhibitory_gmm --gmm-source processed`).
+
+| Preset | Runs |
+|---|---|
+| `mapmycells` | MapMyCells on the pairwise-unmixing `filtered` tables |
+| `tasic_superclusters` | Tasic supercluster matching, `log_zscore` normalization |
+| `p3_mixed_inhibitory_gmm` | Inhibitory GMM on the mixed `all_spots` table (P3 data) |
+| `p3_mixed_inhibitory_gmm_no_gfp` | Same, without GFP in the gate — use when GFP is pan-neuronal (e.g. 839909) |
+
+A preset is a JSON object of `run_capsule.py` options (`run_*`, `spots`, `normalization`,
+`hcr_apply_pf`, `gmm_*`, plus an optional `description`); unknown keys are rejected. The app
+panel's run flags have no default value so that an untouched panel does not override a preset.
 
 ---
 
@@ -18,6 +35,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full details.
 
 | Date | Summary |
 |---|---|
+| 2026-09-25 | Added the **inhibitory GMM** strategy (ported from `hcr-pairwise-spot-unmixing`) and `--config` presets in `code/configs/`. The GMM strategy reads processed round assets, a spot-parquet asset or a pairwise-unmixing asset. |
 | 2026-06-29 | Added the **Tasic supercluster matching** strategy (extracted from `hcr-integrated-qc-capsule`). `run_capsule.py` now selects strategies via `--run-mapmycells` / `--run-tasic-superclusters`; MapMyCells code moved to `code/mapmycells/`, new pipeline in `code/tasic_superclusters/`. |
 | 2026-05-28 | Added spot-mode input selection to `run_capsule.py` via `--spots {filtered\|all_spots}` (default: `filtered`), with backward-compatible legacy CSV fallbacks and spot-specific output folders |
 
@@ -57,6 +75,21 @@ The Tasic supercluster strategy needs the **Tasic 2018 Smart-seq VISp reference*
 `TASIC_SMARTSEQ_DIR` env var. See `SS_PATH` in
 [code/tasic_superclusters/run_tasic_superclusters.py](code/tasic_superclusters/run_tasic_superclusters.py).
 
+### Mixed spot tables (inhibitory GMM)
+The inhibitory GMM strategy needs no pairwise-unmixing asset. It builds the all-rounds mixed
+cell × gene table from whichever of these is mounted (`--gmm-source auto` tries them in order):
+
+| `--gmm-source` | Mount | Reads |
+|---|---|---|
+| `pairwise` | `HCR_{mouse}_pairwise-unmixing_*` | `{mouse}_R{N}/mixed_{spots}_cell_by_gene.csv` (already built) |
+| `spot_parquet` | an hcr-cache-spot-table asset (matched on `subject.json`) | `spots_R{N}.parquet` + `meta_R{N}.json` |
+| `processed` | one `HCR_{mouse}_..._processed_...` asset per round | `processing_manifest.json` + `image_spot_spectral_unmixing/mixed_spots_R{N}.pkl` |
+
+Spot-level sources use the pairwise capsule's rules: per-mouse gene deletions and gene-dict
+overrides, and the Slc17a7 ≥ 200 intensity floor. `--gmm-spots filtered` also gates on the
+pairwise `valid_spot` QC, so it needs the pairwise asset; processed and spot-parquet sources
+support `all_spots` only.
+
 ---
 
 ## Usage
@@ -78,7 +111,30 @@ python run_capsule.py --mouse-id 767018 --run-tasic-superclusters true
 
 # both strategies in one run
 python run_capsule.py --mouse-id 767018 --run-mapmycells true --run-tasic-superclusters true
+
+# P3: inhibitory GMM on the mixed spot table from processed round assets
+python run_capsule.py --mouse-id 839909 --config p3_mixed_inhibitory_gmm
 ```
+
+**Inhibitory GMM** writes under `/root/capsule/results/inhibitory_gmm/`. The folder and file
+names match the pairwise capsule's `inhibitory_cells_mixed_*` output:
+
+```
+inhibitory_gmm/
+├── inputs.json                                  source, per-round files, genes, parameters, counts
+├── all_cells_mixed_{spots}/mixed_all_cells_{spots}.csv   all-rounds mixed cell x gene
+└── inhibitory_cells_mixed_{spots}/
+    ├── mixed_inhibitory_cells_{spots}.csv       GMM-selected, Slc17a7-QC'd cells
+    ├── mixed_cluster_labels_{spots}.csv         cell_id, cluster (k-means)
+    ├── mixed_sorted_cell_ids_{spots}.csv        heatmap row order
+    ├── mixed_gmm_thresholds_{spots}.csv         per-gene GMM thresholds
+    └── *.png                                    GMM grid / refit, Slc17a7 QC, clustered heatmap
+```
+
+Unlike the pairwise capsule's file, `mixed_cluster_labels_*.csv` has a `cell_id` column. The
+pairwise file is indexed by heatmap row and only lines up with `*_sorted_cell_ids*.csv`.
+GMM genes, the Slc17a7 cutoff, `k` and the heatmap clip are preset keys (`gmm_genes`,
+`gmm_slc17a7_max`, `gmm_k`, `gmm_clip_max`).
 
 **MapMyCells** writes under `/root/capsule/results/mapmycells/` into spot-specific folders:
 - `inhibitory_cells_filtered` / `all_cells_filtered`
@@ -132,11 +188,11 @@ plots/
 ## Cell typing table
 
 After the strategies run, a single consolidated table of every HCR cell with its
-assignment(s) is written to `results/cell_typing_table.csv`. If both strategies
-ran, the TASIC and MapMyCells per-method tables are merged (outer join) on the
-mouse-stripped cell id; if only one ran, it is a cleaned copy of that method's
-table. Columns from a method that did not type a given cell are left blank for
-that row.
+assignment(s) is written to `results/cell_typing_table.csv`. The per-method tables
+are merged (outer join) on the mouse-stripped cell id; if only one method ran, it
+is a cleaned copy of that method's table. Columns from a method that did not type
+a given cell are left blank for that row. When the inhibitory GMM ran, `gmm_cluster`
+(k-means cluster) and `gmm_inhibitory` (`True` for GMM-selected cells) are appended.
 
 | Column | Source | Description |
 |---|---|---|

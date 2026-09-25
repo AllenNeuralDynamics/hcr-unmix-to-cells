@@ -1,0 +1,7 @@
+{
+  "description": "Tasic 2018 supercluster matching on the pairwise-unmixing filtered inhibitory table.",
+  "run_tasic_superclusters": true,
+  "spots": "filtered",
+  "normalization": "log_zscore",
+  "hcr_apply_pf": false
+}

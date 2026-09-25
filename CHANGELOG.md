@@ -2,6 +2,23 @@
 
 All notable changes to this capsule are documented in this file.
 
+## 2026-09-25
+
+- Added the **inhibitory GMM** strategy (`--run-inhibitory-gmm`, [code/inhibitory_gmm/](code/inhibitory_gmm/)),
+  ported from `run_inhibitory_cell_analysis` in `hcr-pairwise-spot-unmixing`: mixed all-rounds
+  cell × gene → per-gene GMM inhibitory gating → Slc17a7 ≤ 150 QC → k-means clusters.
+  Inputs come from a pairwise-unmixing asset, a spot-parquet asset, or processed round assets
+  (`--gmm-source`), so no pairwise-unmixing run is needed.
+- `mixed_cluster_labels_*.csv` now carries `cell_id`; GMM thresholds are saved as a CSV.
+- Added `--config` presets in [code/configs/](code/configs/) (`mapmycells`, `tasic_superclusters`,
+  `p3_mixed_inhibitory_gmm`, `p3_mixed_inhibitory_gmm_no_gfp`). Explicit arguments override the preset.
+  On 839909 (pan-neuronal GFP) the GFP gate passes 60% of the full preset's inhibitory calls on
+  GFP alone; the `no_gfp` preset drops it.
+- App panel: added `--config`, `--run-inhibitory-gmm`, `--gmm-spots` and `--gmm-source`; removed
+  the `--run-*` and `--spots` defaults so an untouched panel does not override a preset.
+- `cell_typing_table.csv` gains `gmm_cluster` / `gmm_inhibitory` when the GMM strategy ran.
+- Added unit tests under `tests/`.
+
 ## 2026-05-28
 
 - Added spot-mode input selection to [code/run_capsule.py](code/run_capsule.py) with `--spots {filtered|all_spots}`.

@@ -1,0 +1,10 @@
+{
+  "description": "P3: mixed spot table (processed round assets, a spot-parquet asset, or a pairwise-unmixing asset) -> per-gene GMM inhibitory gating -> Slc17a7 QC -> k-means clusters.",
+  "run_inhibitory_gmm": true,
+  "gmm_spots": "all_spots",
+  "gmm_source": "auto",
+  "gmm_genes": ["GFP", "Pvalb", "Sst", "Vip", "Npy", "Gad2"],
+  "gmm_slc17a7_max": 150,
+  "gmm_k": 20,
+  "gmm_clip_max": 200
+}

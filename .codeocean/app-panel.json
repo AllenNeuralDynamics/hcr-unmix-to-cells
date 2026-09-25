@@ -10,12 +10,24 @@
 			"value_type": "string"
 		},
 		{
+			"id": "Qv7cN2pLx8RtWb4e",
+			"name": "--config",
+			"param_name": "config",
+			"type": "list",
+			"value_type": "string",
+			"extra_data": [
+				"mapmycells",
+				"tasic_superclusters",
+				"p3_mixed_inhibitory_gmm",
+				"p3_mixed_inhibitory_gmm_no_gfp"
+			]
+		},
+		{
 			"id": "kiLEGAniBrF45aXA",
 			"name": "--run-mapmycells",
 			"param_name": "run-mapmycells",
 			"type": "list",
 			"value_type": "boolean",
-			"default_value": "True",
 			"extra_data": []
 		},
 		{
@@ -24,7 +36,14 @@
 			"param_name": "run-tasic-superclusters",
 			"type": "list",
 			"value_type": "boolean",
-			"default_value": "False",
+			"extra_data": []
+		},
+		{
+			"id": "Hj3sYk9ZmDq2Lf6u",
+			"name": "--run-inhibitory-gmm",
+			"param_name": "run-inhibitory-gmm",
+			"type": "list",
+			"value_type": "boolean",
 			"extra_data": []
 		},
 		{
@@ -39,8 +58,31 @@
 			"name": "--spots",
 			"param_name": "spots",
 			"type": "text",
+			"value_type": "string"
+		},
+		{
+			"id": "Tn5bWc8RpGe1Xa7s",
+			"name": "--gmm-spots",
+			"param_name": "gmm-spots",
+			"type": "list",
 			"value_type": "string",
-			"default_value": "filtered"
+			"extra_data": [
+				"all_spots",
+				"filtered"
+			]
+		},
+		{
+			"id": "Mw2dFz6KqLs9Vy3n",
+			"name": "--gmm-source",
+			"param_name": "gmm-source",
+			"type": "list",
+			"value_type": "string",
+			"extra_data": [
+				"auto",
+				"pairwise",
+				"spot_parquet",
+				"processed"
+			]
 		}
 	]
 }

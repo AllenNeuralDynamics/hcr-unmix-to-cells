@@ -1,0 +1,10 @@
+{
+  "description": "P3 inhibitory GMM without GFP in the gate, for mice where GFP is pan-neuronal (e.g. 839909): Gad2/Pvalb/Sst/Vip/Npy only.",
+  "run_inhibitory_gmm": true,
+  "gmm_spots": "all_spots",
+  "gmm_source": "auto",
+  "gmm_genes": ["Pvalb", "Sst", "Vip", "Npy", "Gad2"],
+  "gmm_slc17a7_max": 150,
+  "gmm_k": 20,
+  "gmm_clip_max": 200
+}

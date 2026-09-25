@@ -1,0 +1,5 @@
+{
+  "description": "MapMyCells taxonomy mapping on the pairwise-unmixing filtered tables (capsule default).",
+  "run_mapmycells": true,
+  "spots": "filtered"
+}
