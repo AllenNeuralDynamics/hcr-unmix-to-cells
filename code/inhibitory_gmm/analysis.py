@@ -58,8 +58,7 @@ def run_inhibitory_cell_analysis(cxg_pivot: pd.DataFrame, output_dir: Path, mous
 
     ``table_type`` is ``<spot type>_<subset>`` (e.g. ``mixed_all_spots``) and names the
     output folder ``inhibitory_cells_<table_type>`` and the file prefixes/suffixes.
-    Returns ``(inhibitory pivot, labels frame, thresholds, gate cell ids)``; the gate ids are
-    every cell passing the GMM gate, before the Slc17a7 cutoff.
+    Returns ``(inhibitory pivot, labels frame, thresholds)``.
     """
 
     spot_type, _, filter_tag = table_type.partition("_")
@@ -117,4 +116,4 @@ def run_inhibitory_cell_analysis(cxg_pivot: pd.DataFrame, output_dir: Path, mous
     if isinstance(thresholds, pd.DataFrame):
         thresholds.to_csv(output_dir / f"{spot_type}_gmm_thresholds{suffix}.csv")
     print(f"  Saved inhibitory cell outputs to {output_dir}")
-    return inh_cells_pivot, labels, thresholds, inh_cells_plain.index
+    return inh_cells_pivot, labels, thresholds

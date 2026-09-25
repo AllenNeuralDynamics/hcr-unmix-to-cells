@@ -161,22 +161,18 @@ inhibitory_gmm/subtypes/
 └── silhouette_by_subclass.csv            silhouette vs k (2-8) per subclass
 ```
 
-**Classes and excitatory clustering** (`gmm_classes: true`, on in `p3_mixed_inhibitory_gmm_no_gfp`)
-label *every* cell. A Slc17a7 GMM threshold is fitted on all cells (same routine as the gate):
+**Classes** (`gmm_classes: true`, on in `p3_mixed_inhibitory_gmm_no_gfp`) label *every* cell. A
+Slc17a7 GMM threshold is fitted on all cells (same routine as the gate); the first matching rule wins:
 
 | `class` | Rule |
 |---|---|
-| `Inhibitory` | in the GMM inhibitory set (after the Slc17a7 cutoff) and not Slc17a7+ |
-| `Excitatory` | Slc17a7+ and not in the inhibitory set |
-| `Ambiguous` | in the inhibitory set and Slc17a7+ |
+| `Inhibitory` | in the GMM inhibitory set (after the Slc17a7 cutoff), even when Slc17a7+ |
+| `Excitatory` | Slc17a7+ |
 | `Unassigned` | neither (not `None`, which pandas reads back as missing) |
 
-`inhibitory_gate` marks cells that passed the GMM gate but were cut for Slc17a7 > the cutoff
-(they are `Excitatory` when Slc17a7+). Excitatory cells are clustered with k-means
-(`gmm_excitatory_k`, 4; genes except `gmm_excitatory_exclude`, GFP) on log1p counts into
-`Exc_1`…`Exc_k`, ordered by median total spots. `results/excitatory/` holds the Slc17a7 threshold
-and QC plot, `cell_excitatory_k4.csv`, `excitatory_k4_summary.csv` and `excitatory_k4_cxg.png`;
-`inhibitory_gmm/cell_classes.csv` holds every cell's labels and spot counts.
+`slc17a7_positive` keeps the Slc17a7 call for every cell. `inhibitory_gmm/classes/` holds the
+Slc17a7 threshold and QC plot; `inhibitory_gmm/cell_classes.csv` holds every cell's labels and
+spot counts.
 
 **MapMyCells** writes under `/root/capsule/results/mapmycells/` into spot-specific folders:
 - `inhibitory_cells_filtered` / `all_cells_filtered`
@@ -233,11 +229,12 @@ After the strategies run, a single consolidated table of every HCR cell with its
 assignment(s) is written to `results/cell_typing_table.csv`. The per-method tables
 are merged (outer join) on the mouse-stripped cell id; if only one method ran, it
 is a cleaned copy of that method's table. Columns from a method that did not type
-a given cell are left blank for that row. When the inhibitory GMM ran, `gmm_cluster`
-(k-means cluster) and `gmm_inhibitory` (`True` for GMM-selected cells) are appended, plus
+a given cell are left blank for that row. When the inhibitory GMM ran, `kmean_cluster_<k>`
+(inhibitory k-means cluster, k = `gmm_k`) and `gmm_inhibitory_positive` (`True` for GMM-selected
+cells) are appended, plus
 `gmm_subclass` / `gmm_subtype` when the subtype step ran. When classes ran, the table covers
-**every cell** and leads with `class`, `subclass`, `subtype`, `excitatory_cluster`,
-`inhibitory_gate` and `slc17a7_positive`, with per-gene spot counts last. This root
+**every cell** and leads with `class`, `subclass`, `subtype`, `gmm_inhibitory_positive` and
+`slc17a7_positive`, with per-gene spot counts last. This root
 `cell_typing_table.csv` is the file downstream consumers (hcr-data-packaging) read.
 
 | Column | Source | Description |

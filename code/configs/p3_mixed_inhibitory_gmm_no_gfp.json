@@ -1,5 +1,5 @@
 {
-  "description": "P3 inhibitory GMM without GFP in the gate, for mice where GFP is pan-neuronal (e.g. 839909): Gad2/Pvalb/Sst/Vip/Npy only. Then subclasses (Pvalb/Sst/Vip/Other from GMM positivity), fixed-k subtypes on log1p Calb2/Npy/Pvalb/Sst/Vip, and an all-gene k=10 k-means. Every cell gets a class (Inhibitory/Excitatory/Ambiguous/Unassigned via a Slc17a7 GMM threshold) and excitatory cells a k=4 cluster.",
+  "description": "P3 inhibitory GMM without GFP in the gate, for mice where GFP is pan-neuronal (e.g. 839909): Gad2/Pvalb/Sst/Vip/Npy only. Then subclasses (Pvalb/Sst/Vip/Other from GMM positivity), fixed-k subtypes on log1p Calb2/Npy/Pvalb/Sst/Vip, and an all-gene k=10 k-means. Every cell gets a class (Inhibitory, else Excitatory via a Slc17a7 GMM threshold, else Unassigned).",
   "run_inhibitory_gmm": true,
   "gmm_spots": "all_spots",
   "gmm_source": "auto",
@@ -12,7 +12,5 @@
   "gmm_subtype_exclude": ["GFP", "Slc17a7", "Gad2"],
   "gmm_subtype_k": {"Pvalb": 1, "Sst": 3, "Vip": 3, "Other": 2},
   "gmm_all_gene_k": 10,
-  "gmm_classes": true,
-  "gmm_excitatory_k": 4,
-  "gmm_excitatory_exclude": ["GFP"]
+  "gmm_classes": true
 }

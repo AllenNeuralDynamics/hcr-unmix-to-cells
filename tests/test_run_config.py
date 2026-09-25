@@ -42,8 +42,9 @@ def test_cell_typing_table_includes_gmm_labels(tmp_path):
     )
     out = build_cell_typing_table(tmp_path, "839909", gmm_spots="all_spots")
     table = pd.read_csv(out)
-    assert list(table.columns) == ["cell_id", "mouse_id", "gmm_cluster", "gmm_inhibitory"]
-    assert table.set_index("cell_id")["gmm_cluster"].to_dict() == {5: 3, 9: 0}
+    assert list(table.columns) == ["cell_id", "mouse_id", "kmean_cluster_2",
+                                   "gmm_inhibitory_positive"]
+    assert table.set_index("cell_id")["kmean_cluster_2"].to_dict() == {5: 3, 9: 0}
     assert build_cell_typing_table(tmp_path / "empty", "839909") is None
 
     subtypes = tmp_path / "inhibitory_gmm" / "subtypes"
@@ -59,14 +60,14 @@ def test_cell_typing_table_covers_all_cells_when_classes_ran(tmp_path):
     folder.mkdir()
     pd.DataFrame({
         "cell_id": [5, 9, 11], "class": ["Inhibitory", "Excitatory", "Unassigned"],
-        "inhibitory_gate": [True, False, False], "slc17a7_positive": [False, True, False],
-        "excitatory_cluster": [None, "e0_Slc17a7", None], "subclass": ["Vip", None, None],
-        "subtype": ["Vip_Calb2", None, None], "gmm_cluster": [3, None, None],
+        "slc17a7_positive": [True, True, False], "subclass": ["Vip", None, None],
+        "subtype": ["Vip_Calb2", None, None], "kmean_cluster_20": [3, None, None],
         "GFP": [1, 2, 3], "Slc17a7": [4, 300, 0],
     }).to_csv(folder / "cell_classes.csv", index=False)
     table = pd.read_csv(build_cell_typing_table(tmp_path, "839909", gmm_spots="all_spots"))
     assert len(table) == 3
-    assert list(table.columns)[:8] == ["cell_id", "mouse_id", "class", "subclass", "subtype",
-                                       "excitatory_cluster", "inhibitory_gate", "slc17a7_positive"]
+    assert list(table.columns)[:7] == ["cell_id", "mouse_id", "class", "subclass", "subtype",
+                                       "gmm_inhibitory_positive", "slc17a7_positive"]
     assert list(table.columns)[-2:] == ["GFP", "Slc17a7"]
-    assert table["gmm_inhibitory"].tolist() == [True, False, False]
+    assert table["gmm_inhibitory_positive"].tolist() == [True, False, False]
+    assert table["kmean_cluster_20"].tolist()[0] == 3

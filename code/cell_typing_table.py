@@ -19,13 +19,13 @@ MapMyCells (``basic_results.csv``)
     every remaining column is prefixed ``mapmycells_``.
 
 Inhibitory GMM (``inhibitory_gmm/inhibitory_cells_mixed_<spots>/mixed_cluster_labels_<spots>.csv``)
-    cell_id, cluster→gmm_cluster, plus gmm_inhibitory=True. Only GMM-selected
+    cell_id, cluster→kmean_cluster_<k>, plus gmm_inhibitory_positive=True. Only GMM-selected
     inhibitory cells are listed, so other cells get empty GMM columns.
 
 Inhibitory GMM with classes (``inhibitory_gmm/cell_classes.csv``, when present)
-    Every cell: ``class`` (Inhibitory / Excitatory / Ambiguous / Unassigned), ``subclass``,
-    ``subtype``, ``excitatory_cluster``, ``inhibitory_gate``, ``slc17a7_positive``,
-    ``gmm_cluster``, ``gmm_inhibitory`` and per-gene spot counts (last).
+    Every cell: ``class`` (Inhibitory / Excitatory / Unassigned), ``subclass``, ``subtype``,
+    ``gmm_inhibitory_positive``, ``slc17a7_positive``, ``kmean_cluster_<k>`` and per-gene spot
+    counts (last).
 
 Cell-id alignment
 -----------------
@@ -35,6 +35,7 @@ from the TASIC ids so both tables merge on the same key, and keep ``mouse_id`` a
 its own column.
 """
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -72,8 +73,10 @@ GMM_RESULT_SUBPATH_TEMPLATE = (
 GMM_PREFIX = "gmm_"
 GMM_SUBTYPE_SUBPATH = "inhibitory_gmm/subtypes/cell_subtypes_clustering_genes.csv"
 GMM_CLASSES_SUBPATH = "inhibitory_gmm/cell_classes.csv"
-CLASS_COLUMNS = ("class", "subclass", "subtype", "excitatory_cluster", "inhibitory_gate",
-                 "slc17a7_positive")
+GMM_INPUTS_SUBPATH = "inhibitory_gmm/inputs.json"
+GMM_POSITIVE = f"{GMM_PREFIX}inhibitory_positive"
+KMEAN_PREFIX = "kmean_cluster_"
+CLASS_COLUMNS = ("class", "subclass", "subtype", GMM_POSITIVE, "slc17a7_positive")
 
 
 def _strip_mouse_prefix(cell_id: str, mouse_id: str) -> str:
@@ -148,7 +151,7 @@ def load_gmm_table(results_root: Path, spots: str) -> pd.DataFrame | None:
     if classes.exists():
         df = pd.read_csv(classes)
         print(f"[cell_typing_table] Loaded GMM class table ({len(df)} rows): {classes}")
-        df[f"{GMM_PREFIX}inhibitory"] = df["class"].isin(["Inhibitory", "Ambiguous"])
+        df[GMM_POSITIVE] = df["class"].eq("Inhibitory")
         df[MERGE_KEY] = df[MERGE_KEY].astype(str)
         return df
     path = results_root / GMM_RESULT_SUBPATH_TEMPLATE.format(spots=spots)
@@ -157,8 +160,11 @@ def load_gmm_table(results_root: Path, spots: str) -> pd.DataFrame | None:
         return None
     df = pd.read_csv(path)
     print(f"[cell_typing_table] Loaded inhibitory GMM table ({len(df)} rows): {path}")
-    df = df.rename(columns={"cluster": f"{GMM_PREFIX}cluster"})
-    df[f"{GMM_PREFIX}inhibitory"] = True
+    inputs = results_root / GMM_INPUTS_SUBPATH
+    k = (json.loads(inputs.read_text())["parameters"]["k"] if inputs.exists()
+         else df["cluster"].nunique())
+    df = df.rename(columns={"cluster": f"{KMEAN_PREFIX}{k}"})
+    df[GMM_POSITIVE] = True
     df[MERGE_KEY] = df[MERGE_KEY].astype(str)
     subtypes = results_root / GMM_SUBTYPE_SUBPATH
     if subtypes.exists():
@@ -204,11 +210,10 @@ def build_cell_typing_table(
             f"[cell_typing_table] Merged {len(tables)} method tables on {MERGE_KEY!r}: "
             f"{len(combined)} rows."
         )
-    if f"{GMM_PREFIX}inhibitory" in combined.columns:
-        combined[f"{GMM_PREFIX}inhibitory"] = (
-            combined[f"{GMM_PREFIX}inhibitory"].astype("boolean").fillna(False)
-        )
-        combined[f"{GMM_PREFIX}cluster"] = combined[f"{GMM_PREFIX}cluster"].astype("Int64")
+    if GMM_POSITIVE in combined.columns:
+        combined[GMM_POSITIVE] = combined[GMM_POSITIVE].astype("boolean").fillna(False)
+        for col in [c for c in combined.columns if c.startswith(KMEAN_PREFIX)]:
+            combined[col] = combined[col].astype("Int64")
 
     # Ensure a mouse_id column exists and is populated for every row (MapMyCells
     # rows have no mouse id of their own).
@@ -218,10 +223,12 @@ def build_cell_typing_table(
         combined["mouse_id"] = combined["mouse_id"].fillna(str(mouse_id)).astype(str)
 
     # Column order: identity, class labels, then TASIC (leiden_*), MapMyCells, GMM, counts.
-    lead = [c for c in (MERGE_KEY, "mouse_id", *CLASS_COLUMNS) if c in combined.columns]
+    class_cols = CLASS_COLUMNS if "class" in combined.columns else ()
+    lead = [c for c in (MERGE_KEY, "mouse_id", *class_cols) if c in combined.columns]
     tasic_cols = [c for c in combined.columns if c.startswith("leiden_")]
     mmc_cols = [c for c in combined.columns if c.startswith(MMC_PREFIX)]
-    gmm_cols = [c for c in combined.columns if c.startswith(GMM_PREFIX)]
+    gmm_cols = [c for c in combined.columns
+                if c.startswith((GMM_PREFIX, KMEAN_PREFIX)) and c not in lead]
     ordered = lead + tasic_cols + mmc_cols + gmm_cols
     ordered += [c for c in combined.columns if c not in ordered]
     combined = combined[ordered]

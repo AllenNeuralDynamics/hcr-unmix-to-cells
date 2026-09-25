@@ -16,7 +16,7 @@ All notable changes to this capsule are documented in this file.
   GFP alone; the `no_gfp` preset drops it.
 - App panel: added `--config`, `--run-inhibitory-gmm`, `--gmm-spots` and `--gmm-source`; removed
   the `--run-*` and `--spots` defaults so an untouched panel does not override a preset.
-- `cell_typing_table.csv` gains `gmm_cluster` / `gmm_inhibitory` when the GMM strategy ran.
+- `cell_typing_table.csv` gains `kmean_cluster_<k>` / `gmm_inhibitory_positive` when the GMM strategy ran.
 - Added inhibitory **subclasses and subtypes** ([code/inhibitory_gmm/subtypes.py](code/inhibitory_gmm/subtypes.py)):
   Pvalb/Sst/Vip/Other from GMM positivity, fixed-k subtypes per subclass on log1p counts
   (GFP, Slc17a7, Gad2 excluded), an all-gene k-means, three per-cell tables and three raw-count
@@ -24,10 +24,9 @@ All notable changes to this capsule are documented in this file.
   (Pvalb 1, Sst 3, Vip 3, Other 2; all-gene k = 10); adds `gmm_subclass` / `gmm_subtype` to
   `cell_typing_table.csv`.
 - Added **cell classes** for every cell ([code/inhibitory_gmm/classes.py](code/inhibitory_gmm/classes.py)):
-  Inhibitory / Excitatory / Ambiguous / Unassigned from the inhibitory set and a Slc17a7 GMM
-  threshold, plus an excitatory-only k-means (k = 4, `Exc_1..4` by brightness) under
-  `results/excitatory/`. The root `cell_typing_table.csv` then covers all cells with `class`,
-  `subclass`, `subtype`, `excitatory_cluster` first. On in `p3_mixed_inhibitory_gmm_no_gfp`.
+  Inhibitory (takes precedence) / Excitatory (Slc17a7 GMM threshold) / Unassigned. The root
+  `cell_typing_table.csv` then covers all cells with `class`, `subclass`, `subtype`,
+  `gmm_inhibitory_positive`, `slc17a7_positive` first. On in `p3_mixed_inhibitory_gmm_no_gfp`.
 - Added unit tests under `tests/`.
 
 ## 2026-05-28
