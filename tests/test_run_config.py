@@ -61,13 +61,14 @@ def test_cell_typing_table_covers_all_cells_when_classes_ran(tmp_path):
     pd.DataFrame({
         "cell_id": [5, 9, 11], "class": ["Inhibitory", "Excitatory", "Unassigned"],
         "slc17a7_positive": [True, True, False], "subclass": ["Vip", None, None],
-        "subtype": ["Vip_Calb2", None, None], "kmean_cluster_20": [3, None, None],
+        "subtype": ["Vip_Calb2", None, None], "subtype_silhouette": [0.41, None, None],
         "GFP": [1, 2, 3], "Slc17a7": [4, 300, 0],
     }).to_csv(folder / "cell_classes.csv", index=False)
     table = pd.read_csv(build_cell_typing_table(tmp_path, "839909", gmm_spots="all_spots"))
     assert len(table) == 3
-    assert list(table.columns)[:7] == ["cell_id", "mouse_id", "class", "subclass", "subtype",
-                                       "gmm_inhibitory_positive", "slc17a7_positive"]
+    assert list(table.columns)[:8] == ["cell_id", "mouse_id", "class", "subclass", "subtype",
+                                       "subtype_silhouette", "gmm_inhibitory_positive",
+                                       "slc17a7_positive"]
     assert list(table.columns)[-2:] == ["GFP", "Slc17a7"]
     assert table["gmm_inhibitory_positive"].tolist() == [True, False, False]
-    assert table["kmean_cluster_20"].tolist()[0] == 3
+    assert (tmp_path / "cell_typing_table.md").exists()

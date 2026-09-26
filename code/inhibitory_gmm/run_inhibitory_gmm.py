@@ -61,8 +61,9 @@ def main(mouse_id: str, data_root: Path, output_dir: Path, spots: str = "all_spo
         all_genes = plain_gene_table(cxg)
         per_cell = run_classes(all_genes, inhibitory.index, output_dir / "classes")
         if cell_types is not None:
-            per_cell = per_cell.join(cell_types[["subclass", "subtype"]])
-        per_cell = per_cell.join(labels.set_index("cell_id")["cluster"].rename(f"kmean_cluster_{k}"))
+            sub = cell_types[["subclass", "subtype", "silhouette"]]
+            per_cell = per_cell.join(sub.rename(columns={"silhouette": "subtype_silhouette"}))
+            per_cell["subtype_silhouette"] = per_cell["subtype_silhouette"].round(3)
         lead = [g for g in LEAD_GENES if g in all_genes.columns]
         per_cell = per_cell.join(all_genes[lead + [g for g in all_genes.columns if g not in lead]])
         per_cell.index.name = "cell_id"

@@ -24,8 +24,8 @@ Inhibitory GMM (``inhibitory_gmm/inhibitory_cells_mixed_<spots>/mixed_cluster_la
 
 Inhibitory GMM with classes (``inhibitory_gmm/cell_classes.csv``, when present)
     Every cell: ``class`` (Inhibitory / Excitatory / Unassigned), ``subclass``, ``subtype``,
-    ``gmm_inhibitory_positive``, ``slc17a7_positive``, ``kmean_cluster_<k>`` and per-gene spot
-    counts (last).
+    ``subtype_silhouette``, ``gmm_inhibitory_positive``, ``slc17a7_positive`` and per-gene spot
+    counts (last). Column reference: ``cell_typing_table.md`` (copied next to the table).
 
 Cell-id alignment
 -----------------
@@ -36,12 +36,14 @@ its own column.
 """
 
 import json
+import shutil
 from pathlib import Path
 
 import pandas as pd
 
 # --- output location ---------------------------------------------------------
 CELL_TYPING_TABLE_NAME = "cell_typing_table.csv"
+CELL_TYPING_DOC = Path(__file__).with_name("cell_typing_table.md")
 
 # --- TASIC ("hcr_assignments_leiden_named.csv") ------------------------------
 TASIC_RESULT_SUBPATH = Path("tasic_superclusters") / "stage5" / "hcr_assignments_leiden_named.csv"
@@ -76,7 +78,8 @@ GMM_CLASSES_SUBPATH = "inhibitory_gmm/cell_classes.csv"
 GMM_INPUTS_SUBPATH = "inhibitory_gmm/inputs.json"
 GMM_POSITIVE = f"{GMM_PREFIX}inhibitory_positive"
 KMEAN_PREFIX = "kmean_cluster_"
-CLASS_COLUMNS = ("class", "subclass", "subtype", GMM_POSITIVE, "slc17a7_positive")
+CLASS_COLUMNS = ("class", "subclass", "subtype", "subtype_silhouette", GMM_POSITIVE,
+                 "slc17a7_positive")
 
 
 def _strip_mouse_prefix(cell_id: str, mouse_id: str) -> str:
@@ -240,4 +243,6 @@ def build_cell_typing_table(
         f"[cell_typing_table] Wrote cell typing table ({len(combined)} rows, "
         f"{len(combined.columns)} cols): {out_path}"
     )
+    if "class" in combined.columns:
+        shutil.copyfile(CELL_TYPING_DOC, results_root / CELL_TYPING_DOC.name)
     return out_path

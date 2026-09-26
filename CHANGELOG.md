@@ -26,7 +26,9 @@ All notable changes to this capsule are documented in this file.
 - Added **cell classes** for every cell ([code/inhibitory_gmm/classes.py](code/inhibitory_gmm/classes.py)):
   Inhibitory (takes precedence) / Excitatory (Slc17a7 GMM threshold) / Unassigned. The root
   `cell_typing_table.csv` then covers all cells with `class`, `subclass`, `subtype`,
-  `gmm_inhibitory_positive`, `slc17a7_positive` first. On in `p3_mixed_inhibitory_gmm_no_gfp`.
+  `subtype_silhouette` (per-cell silhouette within the subclass), `gmm_inhibitory_positive`,
+  `slc17a7_positive` first, and [code/cell_typing_table.md](code/cell_typing_table.md) (procedure
+  and column reference) is copied beside it. On in `p3_mixed_inhibitory_gmm_no_gfp`.
 - Added unit tests under `tests/`.
 
 ## 2026-05-28

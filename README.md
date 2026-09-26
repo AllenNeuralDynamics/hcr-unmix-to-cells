@@ -233,8 +233,10 @@ a given cell are left blank for that row. When the inhibitory GMM ran, `kmean_cl
 (inhibitory k-means cluster, k = `gmm_k`) and `gmm_inhibitory_positive` (`True` for GMM-selected
 cells) are appended, plus
 `gmm_subclass` / `gmm_subtype` when the subtype step ran. When classes ran, the table covers
-**every cell** and leads with `class`, `subclass`, `subtype`, `gmm_inhibitory_positive` and
-`slc17a7_positive`, with per-gene spot counts last. This root
+**every cell** and leads with `class`, `subclass`, `subtype`, `subtype_silhouette`,
+`gmm_inhibitory_positive` and `slc17a7_positive`, with per-gene spot counts last. The procedure
+and every column are documented in [code/cell_typing_table.md](code/cell_typing_table.md), which is
+copied next to the table in the results. This root
 `cell_typing_table.csv` is the file downstream consumers (hcr-data-packaging) read.
 
 | Column | Source | Description |
