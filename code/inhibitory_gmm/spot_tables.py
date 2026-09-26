@@ -90,9 +90,10 @@ def find_spot_parquet_rounds(data_root: Path, mouse_id: str) -> list[RoundInput]
         metas = sorted(asset.glob("meta_R*.json"))
         if not metas:
             continue
-        # The asset name does not carry the mouse; subject.json does.
-        subject = asset / "subject.json"
-        if subject.exists() and str(_read_json(subject).get("subject_id")) not in _mouse_ids(mouse_id):
+        # The asset name does not carry the mouse; subject.json (or data_description) does.
+        record = next((p for p in (asset / "subject.json", asset / "data_description.json")
+                       if p.exists()), None)
+        if record and str(_read_json(record).get("subject_id")) not in _mouse_ids(mouse_id):
             continue
         for meta_path in metas:
             meta = _read_json(meta_path)

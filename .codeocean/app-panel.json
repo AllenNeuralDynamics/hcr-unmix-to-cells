@@ -83,6 +83,13 @@
 				"spot_parquet",
 				"processed"
 			]
+		},
+		{
+			"id": "Rc4tXp8LmQ2vHs7k",
+			"name": "--creation-time",
+			"param_name": "creation-time",
+			"type": "text",
+			"value_type": "string"
 		}
 	]
 }

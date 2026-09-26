@@ -10,6 +10,8 @@ RUN --mount=type=secret,id=git-access-token \
     GIT_ACCESS_TOKEN="$(cat /run/secrets/git-access-token)" \
     pip install -U --no-cache-dir \
     aind-data-access-api[docdb]==1.9.3 \
+    aind-data-schema==2.9.0 \
+    aind-metadata-upgrader==0.17.12 \
     anndata==0.12.18 \
     codeocean==0.14.0 \
     igraph==1.0.0 \

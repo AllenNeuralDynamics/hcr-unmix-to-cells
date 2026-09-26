@@ -44,6 +44,7 @@ python run_capsule.py --mouse-id 839909 --config p3_mixed_inhibitory_gmm
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 # The two strategies live in sibling subfolders. Add them to sys.path so their
@@ -390,6 +391,36 @@ def run_tasic_superclusters(
     )
 
 
+def write_metadata(output_root: Path, mouse_id: str, settings: dict, started: datetime,
+                   creation_time: str | None, used_unmixing_asset: bool,
+                   ran_gmm: bool) -> None:
+    """data_description / processing / metadata.nd.json derived from the assets actually read."""
+    import aind_metadata
+
+    sources: list[Path] = []
+    if ran_gmm:
+        inputs = json.loads((output_root / "inhibitory_gmm" / "inputs.json").read_text())
+        sources += [DATA_ROOT / name for name in
+                    dict.fromkeys(r["source_asset"] for r in inputs["rounds"])]
+    if used_unmixing_asset:
+        sources.append(find_unmixing_asset(mouse_id, settings["spots"]))
+    sources = list(dict.fromkeys(sources))
+    when = None
+    if creation_time:
+        when = datetime.fromisoformat(creation_time.replace("Z", "+00:00"))
+        when = when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+    outputs = {p.name: {"size_mb": round(p.stat().st_size / 1e6, 1)}
+               for p in (output_root / "cell_typing_table.csv",
+                         output_root / "cell_typing_table.md") if p.exists()}
+    summary = (f"Per-cell cell-typing labels for mouse {mouse_id} in cell_typing_table.csv "
+               f"(class / subclass / subtype from the inhibitory GMM, where run); procedure and "
+               f"columns documented in cell_typing_table.md.")
+    name = aind_metadata.write(output_root, sources, parameters={"mouse_id": mouse_id, **settings},
+                               start=started, outputs=outputs, summary=summary,
+                               subject_id=mouse_id, creation_time=when)
+    print(f"Derived asset name: {name}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Run capsule – cell-typing strategy orchestrator",
@@ -488,8 +519,16 @@ if __name__ == "__main__":
         help="(Tasic, pflogpf only) apply the depth-normalizing PF step to HCR "
              "(true/false). False keeps HCR depth-free but still centers cells.",
     )
+    parser.add_argument(
+        "--creation-time",
+        type=str,
+        default=None,
+        help="ISO-8601 UTC timestamp for the derived asset name. Pass the launcher's timestamp "
+             "so the Code Ocean asset name and data_description.name agree.",
+    )
     # Consume only known args; pass everything else straight to the mapper
     args, remaining = parser.parse_known_args()
+    started = datetime.now(timezone.utc)
     settings = resolve_settings(vars(args), args.config)
     print(f"Config: {args.config or '(none)'}")
     print(f"Settings: {json.dumps(settings)}")
@@ -557,3 +596,7 @@ if __name__ == "__main__":
         output_root, mouse_id, spots=settings["spots"],
         gmm_spots=settings["gmm_spots"] if run_gmm else None,
     )
+
+    # --- standard AIND metadata for the derived asset --------------------------
+    write_metadata(output_root, mouse_id, settings, started, args.creation_time,
+                   run_mmc or run_tasic, run_gmm)
